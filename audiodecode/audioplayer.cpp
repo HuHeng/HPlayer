@@ -59,6 +59,11 @@ bool AudioPlayer::openAudioFile()
 	audioDecoder = new AudioDecoder(aw->codecCtx);
 }
 
+/*
+open stream init, create demuxer and decoder, init them
+start the thread, doplay, go to eventloop
+*/
+
 void AudioPlayer::play()
 {
 
