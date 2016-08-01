@@ -1,6 +1,5 @@
 #include <iostream>
 #include <thread>
-#include <QDebug>
 #include "audioworks.h"
 
 AudioWorks::AudioWorks():
@@ -110,8 +109,10 @@ void AudioDecoder::run()
 		AVPacket pkt;
 		aw->audioPacketQ.pop(pkt);
 		int flush = 0;
+		//flush the left frame
 		if(pkt.size == 0 && pkt.data == NULL)
-			flush = 1;//flush the left frame
+			flush = 1;
+		
 		//get a frame and push
 		int gotFrame;
 		do{

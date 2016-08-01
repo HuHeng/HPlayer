@@ -51,8 +51,8 @@ private:
     QTimer* sendTimer;
 	
 	AudioWorks* aw;
-	Demuxer* demuxer;
-	AudioDecoder* audioDecoder;
+	ThreadObj* demuxer;
+	ThreadObj* audioDecoder;
 
     /*ui*/
     ClickedSlider* progressSlider;

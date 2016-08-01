@@ -55,8 +55,8 @@ bool AudioPlayer::openAudioFile()
 	//test mp3
 	aw->openStream("/home/huheng/andy.mp3");
 	//create demuxer and decoder
-	demuxer = new Demuxer(aw->formatCtx);
-	audioDecoder = new AudioDecoder(aw->codecCtx);
+	demuxer = new Demuxer(aw);
+	audioDecoder = new AudioDecoder(aw);
 }
 
 /*
