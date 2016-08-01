@@ -32,7 +32,7 @@ void SafeQueue<T, MAXSIZE>::push(const T& data)
 	}
 	/*if queue was full, wait */
 	if(q.size() >= MAXSIZE){
-		condNotFull.wait(lock, [this]{return q.size() < MAXSIZE;});
+		condNotFull.wait(lock, [this]{return q.size() < MAXSIZE || abortRequest;});
 	}
 	q.push(data);
 	condNotEmpty.notify_one();
@@ -47,7 +47,7 @@ void SafeQueue<T, MAXSIZE>::pop(T& data)
 	}
 	/*if queue was empty, wait*/
 	if(q.empty()){
-		condNotEmpty.wait(lock, [this]{return !q.empty();});
+		condNotEmpty.wait(lock, [this]{return !q.empty() || abortRequest;});
 	}
 	data = q.front();
 	q.pop();

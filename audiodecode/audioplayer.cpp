@@ -60,6 +60,11 @@ bool AudioPlayer::openAudioFile()
     return ret;
 }
 
+/*
+open stream init, create demuxer and decoder, init them
+start the thread, doplay, go to eventloop
+*/
+
 void AudioPlayer::play()
 {
     QAudioFormat audioFormat;
