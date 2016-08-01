@@ -50,18 +50,18 @@ AudioPlayer::~AudioPlayer()
 
 bool AudioPlayer::openAudioFile()
 {
-	/*open stream and init format Ctx and Codec Ctx*/
-	aw = new AudioWorks();
-	//test mp3
-	aw->openStream("/home/huheng/andy.mp3");
-	//create demuxer and decoder
-	demuxer = new Demuxer(aw->formatCtx);
-	audioDecoder = new AudioDecoder(aw->codecCtx);
+    audioFile = new QFile("/home/huheng/andy.pcm");
+    bool ret = audioFile->open(QIODevice::ReadOnly);
+    if(!ret){
+        qDebug("open file: %s, falied!", qPrintable(audioFile->fileName()));
+        return ret;
+    }
+    audioFile->seek(0);
+    return ret;
 }
 
 void AudioPlayer::play()
 {
-
     QAudioFormat audioFormat;
     audioFormat.setSampleRate(44100);
     audioFormat.setChannelCount(2);

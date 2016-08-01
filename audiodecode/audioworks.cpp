@@ -8,6 +8,7 @@ AudioWorks::AudioWorks():
 	pos(0),
 	filename(NULL),
 	eof(false),
+	abortRequest(false),
 	formatCtx(NULL),
 	codecCtx(NULL)
 {
@@ -66,18 +67,12 @@ int AudioWorks::openStream(char* filename)
 }
 
 
-Demuxer::Demuxer(AudioWorks* audioWorks):demux(NULL), aw(audioWorks)
+Demuxer::Demuxer(AudioWorks* audioWorks): aw(audioWorks)
 {
 	
 }
 Demuxer::~Demuxer()
 {
-	if(demux)	
-		delete demux;
-}
-void Demuxer::start()
-{
-	demux = new std::thread(std::mem_fn(&Demuxer::run), this);
 }
 
 void Demuxer::run()
@@ -90,13 +85,13 @@ void Demuxer::run()
 		pkt.data = NULL;
 		int ret = av_read_frame(aw->formatCtx, &pkt);
 		//end of stream, put null packet flush the remaining frames
-		if(ret < 0){
-			if((ret == AVERROR_EOF || avio_feof(aw->formatCtx->pb)) && !aw->eof){
-				pkt.size = 0;
-				pkt.data = NULL;
-				aw->audioPacketQ.push(pkt);
-				aw->eof = true;
-			}
+		if((ret == AVERROR_EOF || avio_feof(aw->formatCtx->pb)) && !aw->eof){
+			pkt.size = 0;
+			pkt.data = NULL;
+			aw->audioPacketQ.push(pkt);
+			aw->eof = true;
+			//FIXME: maybe stop
+			break;
 		}
 		/*push the audio packet*/
 		if(pkt.stream_index == aw->audioIndex){
@@ -107,15 +102,35 @@ void Demuxer::run()
 	}
 }
 
-/* what does a decoder do? */
-class Decoder 
+void AudioDecoder::run()
 {
-public:
-	virtual void run() = 0;
-private:
-	AVCodecContext* codecCtx;
-};
-
+	AVFrame* frame = av_frame_alloc();
+	//get a pkt and decode it
+	for(;;){
+		AVPacket pkt;
+		aw->audioPacketQ.pop(pkt);
+		int flush = 0;
+		if(pkt.size == 0 && pkt.data == NULL)
+			flush = 1;//flush the left frame
+		//get a frame and push
+		int gotFrame;
+		do{
+			int ret = avcodec_decode_audio4(aw->codecCtx, frame, &gotFrame, &pkt);
+			if(ret < 0){
+				std::cout<<"decode audio error!"<<std::endl;	
+				break;
+			}
+			if(gotFrame){
+				AVFrame* qFrame = av_frame_alloc();
+				av_frame_move_ref(qFrame, frame);
+				aw->audioFrameQ.push(qFrame);
+			}
+			pkt.data += ret;
+			pkt.size -= ret;
+		} while(pkt.size > 0 || (gotFrame && flush));
+	}
+	av_frame_unref(frame);
+}
 
 int main()
 {

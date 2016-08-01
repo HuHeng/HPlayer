@@ -18,6 +18,7 @@ public:
 	double pos;
 	char* filename;
 	bool eof; /*end of file*/
+	bool abortRequest;
 	SafeQueue<AVPacket, 25> audioPacketQ; 
 	SafeQueue<AVFrame*, 10> audioFrameQ;
 	/* ffmpeg struct */
@@ -26,19 +27,39 @@ public:
 	int audioIndex;
 };
 
-class Demuxer
+class ThreadObj
+{
+public:
+	virtual void run() = 0;
+	void start(){
+		pThread = new std::thread(std::mem_fn(&ThreadObj::run), this);
+	}
+	void join(){
+		pThread->join();
+		delete pThread;
+	}
+private:
+	std::thread* pThread;
+};
+
+class Demuxer: public ThreadObj
 {
 public:
 	Demuxer(AudioWorks* audioWorks);
 	~Demuxer();
-	/*run thread, read packet and put it in the packet queue. */
-	void start();
-	void stop();
 	/*thread function*/
-	void run();
-	/*init formatCtx*/
-	void init();
+	virtual void run();
 private:
-	std::thread* demux;
 	AudioWorks* aw;
 };
+
+class AudioDecoder: public ThreadObj
+{
+public:
+	AudioDecoder(AudioWorks* audioWorks);
+	~AudioDecoder();
+	virtual void run();
+private:
+	AudioWorks* aw;
+};
+

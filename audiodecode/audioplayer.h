@@ -45,11 +45,15 @@ private slots:
 
 private:
     QFile *audioFile;
+	/*audio play device*/
     QAudioOutput *audioOutput;
     QIODevice* audioDevice;
-
     QTimer* sendTimer;
+	
 	AudioWorks* aw;
+	Demuxer* demuxer;
+	AudioDecoder* audioDecoder;
+
     /*ui*/
     ClickedSlider* progressSlider;
     ClickedSlider* volumSlider;
