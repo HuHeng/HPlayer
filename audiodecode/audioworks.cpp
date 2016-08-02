@@ -61,7 +61,6 @@ int AudioWorks::openStream(char* filename)
 		std::cout<<"open codecCtx failed!"<<std::endl;
 		return -1;
 	}
-	/*open formatCtx and codecCtx success*/
 	return 0;
 }
 
@@ -131,8 +130,4 @@ void AudioDecoder::run()
 		} while(pkt.size > 0 || (gotFrame && flush));
 	}
 	av_frame_unref(frame);
-}
-
-int main()
-{
 }

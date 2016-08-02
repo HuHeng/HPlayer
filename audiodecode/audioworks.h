@@ -21,6 +21,17 @@ public:
 	bool abortRequest;
 	SafeQueue<AVPacket, 25> audioPacketQ; 
 	SafeQueue<AVFrame*, 10> audioFrameQ;
+	struct AudioBuffer{
+		char* data;
+		int size;
+		int index;
+		AudioBuffer():data(NULL),size(0),index(0){}
+		~AudioBuffer(){
+			if(data)
+				free(data);
+		}
+	} audioBuffer;
+
 	/* ffmpeg struct */
 	AVFormatContext* formatCtx;
 	AVCodecContext* codecCtx;

@@ -7,6 +7,7 @@
 #include <condition_variable>
 
 /*a thread-safe queue*/
+
 template<typename T, int MAXSIZE>
 class SafeQueue
 {
@@ -15,6 +16,7 @@ public:
 	void pop(T& data);
 	void push(const T& data);
 	void abort();
+	unsigned int size();
 private:
 	std::mutex qMutex;
 	std::queue<T> q;
@@ -62,6 +64,13 @@ void SafeQueue<T, MAXSIZE>::abort()
 	abortRequest = 1;
 	condNotFull.notify_all();
 	condNotEmpty.notify_all();
+}
+
+template<typename T, int MAXSIZE>
+unsigned int SafeQueue<T, MAXSIZE>::size()
+{
+	std::unique_lock<std::mutex> lock(qMutex);
+	return q.size();
 }
 
 #endif

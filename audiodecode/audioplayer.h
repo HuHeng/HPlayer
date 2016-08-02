@@ -30,17 +30,18 @@ public:
     AudioPlayer(QWidget* parent = 0);
     ~AudioPlayer();
     bool openAudioFile();
-    void play();
     void stop();
 
     virtual void keyPressEvent(QKeyEvent* e);
 
+	void openAudioOutput();
 public slots:
  //   void seek();
  //   void setVolum(int volum);
 //    void suspend();
  //   void resume();
 private slots:
+	void eventLoop();
     void writeData();
 
 private:
@@ -58,6 +59,5 @@ private:
     ClickedSlider* progressSlider;
     ClickedSlider* volumSlider;
 };
-
 
 #endif // AUDIOPLAYER_H

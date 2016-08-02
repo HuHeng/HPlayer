@@ -48,6 +48,10 @@ AudioPlayer::~AudioPlayer()
 
 }
 
+/*
+ * open stream init, create demuxer and decoder, init them
+ * start the thread, doplay, go to eventloop
+*/
 bool AudioPlayer::openAudioFile()
 {
 	/*open stream and init format Ctx and Codec Ctx*/
@@ -57,32 +61,58 @@ bool AudioPlayer::openAudioFile()
 	//create demuxer and decoder
 	demuxer = new Demuxer(aw);
 	audioDecoder = new AudioDecoder(aw);
+	//set QAudioFormat
+	openAudioOutput();
+
+
+	//start event loop
+	sendTimer = new QTimer();
+    connect(sendTimer, SIGNAL(timeout()), this, SLOT(eventLoop()));
+    sendTimer->start(T_VAL);
+
 }
 
-/*
-open stream init, create demuxer and decoder, init them
-start the thread, doplay, go to eventloop
-*/
-
-void AudioPlayer::play()
+void AudioPlayer::openAudioOutput()
 {
 
     QAudioFormat audioFormat;
-    audioFormat.setSampleRate(44100);
-    audioFormat.setChannelCount(2);
-    audioFormat.setSampleSize(16);
+    audioFormat.setSampleRate(aw->codecCtx->sample_rate);
+    audioFormat.setChannelCount(aw->codecCtx->channels);
     audioFormat.setCodec("audio/pcm");
+	/* the system endian*/
     audioFormat.setByteOrder(QAudioFormat::LittleEndian);
+	/*the audio format*/
     audioFormat.setSampleType(QAudioFormat::SignedInt);
+    audioFormat.setSampleSize(16);
 
     audioOutput = new QAudioOutput(audioFormat, 0);
     audioDevice = audioOutput->start();
 
-    /*write data to audio device when the timer emit timeout*/
-    sendTimer = new QTimer();
-    connect(sendTimer, SIGNAL(timeout()), this, SLOT(writeData()));
-    sendTimer->start(T_VAL);
 }
+
+void AudioPlayer::eventLoop()
+{
+    /*about 10ms per loop*/
+	int freeByres = audioOutput->bytesFree();
+	if(freeBytes <= 0)
+		return;
+	/*first, send the remain data of audio buffer*/
+	int remain = aw->audioBuffer.size - aw->audioBuffer.index;
+	if(remain < freeByres && remain > 0){
+		audioDevice->write(aw->audioBuffer.data + index, remain);
+		
+	}
+	/*second, convert the avframe to the audio buffer and send to the device*/
+	while(freeBytes > 0 && aw->audioFrameQ.size() > 0){
+		//convert AVframe data to audio buffer 
+		
+	
+	}
+	AVFrame* frame;
+	aw->audioFrameQ.pop(frame); 
+
+}
+
 
 void AudioPlayer::writeData()
 {
@@ -141,5 +171,9 @@ void AudioPlayer::keyPressEvent(QKeyEvent *e)
         else
             audioOutput->suspend();
         break;
+	case Qt::Key_Q:
+		/*quit*/
+		aw->abortRequest = 1;
+		break;
     }
 }

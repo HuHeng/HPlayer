@@ -1,5 +1,4 @@
 QT += core gui
-#QT -= gui
 QT += multimedia
 QT += widgets
 
@@ -12,7 +11,10 @@ CONFIG -= app_bundle
 TEMPLATE = app
 
 SOURCES += main.cpp \
-    audioplayer.cpp
+    audioplayer.cpp \
+    audioworks.cpp
 
 HEADERS += \
-    audioplayer.h
+    audioplayer.h \
+    audioworks.h \
+    safequeue.h
