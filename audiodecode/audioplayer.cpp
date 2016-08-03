@@ -100,12 +100,16 @@ void AudioPlayer::eventLoop()
 	int remain = aw->audioBuffer.size - aw->audioBuffer.index;
 	if(remain < freeByres && remain > 0){
 		audioDevice->write(aw->audioBuffer.data + index, remain);
-		
+		index = 0;
+		size = 0;
+		freeByres -= remain;
 	}
 	/*second, convert the avframe to the audio buffer and send to the device*/
 	while(freeBytes > 0 && aw->audioFrameQ.size() > 0){
 		//convert AVframe data to audio buffer 
-		
+		AVFrame* frame;
+		aw->audioFrameQ.pop(frame);
+		if()
 	
 	}
 	AVFrame* frame;
