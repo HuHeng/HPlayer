@@ -30,21 +30,6 @@ public:
 	int audioIndex;
 };
 
-class AudioBuffer{
-public:
-private:
-	SwrContext* swrCtx;
-	char* data;
-	int capacity;
-	int size;
-	int index;
-	AudioBuffer():data(NULL),capacity(0),size(0),index(0){}
-	~AudioBuffer(){
-		if(data)
-			free(data);
-	}
-};
-
 
 class ThreadObj
 {
@@ -81,4 +66,21 @@ public:
 private:
 	AudioWorks* aw;
 };
+
+class AudioBuffer{
+public:
+	AudioBuffer():data(NULL),capacity(0),size(0),index(0){}
+	~AudioBuffer(){
+		if(data)
+			free(data);
+	}
+	void readAVFrame(AVFrame* frame);
+private:
+	SwrContext* swrCtx;
+	char* data;
+	int capacity;
+	int size;
+	int index;
+};
+
 
