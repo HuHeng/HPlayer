@@ -1,7 +1,9 @@
+extern "C"{
 #include "libavformat/avformat.h"
 #include "libavcodec/avcodec.h"
 #include "libavutil/avutil.h"
 #include "libswresample/swresample.h"
+}
 #include "safequeue.h"
 
 class QIODevice;
@@ -22,11 +24,12 @@ public:
 	char* filename;
 	bool eof; /*end of file*/
 	bool abortRequest;
-	SafeQueue<AVPacket, 25> audioPacketQ; 
-	SafeQueue<AVFrame*, 10> audioFrameQ;
+    SafeQueue<AVPacket, 100> audioPacketQ;
+    SafeQueue<AVFrame*, 100> audioFrameQ;
 	/* ffmpeg struct */
 	AVFormatContext* formatCtx;
 	AVCodecContext* codecCtx;
+
 	int audioIndex;
 };
 
@@ -60,7 +63,7 @@ private:
 class AudioDecoder: public ThreadObj
 {
 public:
-	AudioDecoder(AudioWorks* audioWorks);
+    AudioDecoder(AudioWorks* audioWorks);
 	~AudioDecoder();
 	virtual void run();
 private:
@@ -69,15 +72,17 @@ private:
 
 class AudioBuffer{
 public:
-	AudioBuffer():data(NULL),capacity(0),size(0),index(0){}
-	~AudioBuffer(){
-		if(data)
-			free(data);
-	}
+    AudioBuffer(AudioWorks* AudioWorks);
+    ~AudioBuffer();
 	void readAVFrame(AVFrame* frame);
+    void writeData(QIODevice* audioDevice, int len);
+    int getSize();
+    uint8_t* data;
 private:
+  //  QIODevice* audioOutput;
+    AudioWorks* aw;
 	SwrContext* swrCtx;
-	char* data;
+
 	int capacity;
 	int size;
 	int index;

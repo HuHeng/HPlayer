@@ -7,7 +7,7 @@
 
 #include "audioplayer.h"
 
-const int T_VAL = 20; //millsec
+const int T_VAL = 10; //millsec
 const double volumeDelta = 0.1;
 
 /*a slider can response to click*/
@@ -60,10 +60,13 @@ bool AudioPlayer::openAudioFile()
 	aw->openStream("/home/huheng/andy.mp3");
 	//create demuxer and decoder
 	demuxer = new Demuxer(aw);
-	audioDecoder = new AudioDecoder(aw);
+    audioDecoder = new AudioDecoder(aw);
+    audioBuffer = new AudioBuffer(aw);
 	//set QAudioFormat
 	openAudioOutput();
 
+    demuxer->start();
+    audioDecoder->start();
 
 	//start event loop
 	sendTimer = new QTimer();
@@ -90,30 +93,39 @@ void AudioPlayer::openAudioOutput()
 
 }
 
+
 void AudioPlayer::eventLoop()
 {
+    if(aw->abortRequest){
+        demuxer->join();
+        audioDecoder->join();
+    }
     /*about 10ms per loop*/
-	int freeByres = audioOutput->bytesFree();
+    int freeBytes = audioOutput->bytesFree();
 	if(freeBytes <= 0)
 		return;
 	/*first, send the remain data of audio buffer*/
-	int remain = aw->audioBuffer.size - aw->audioBuffer.index;
-	if(remain < freeByres && remain > 0){
-		audioDevice->write(aw->audioBuffer.data + index, remain);
-		index = 0;
-		size = 0;
-		freeByres -= remain;
+    int remain = audioBuffer->getSize();
+    //write remain data
+    if(remain < freeBytes && remain > 0){
+        audioBuffer->writeData(audioDevice, remain);
+        freeBytes -= remain;
 	}
 	/*second, convert the avframe to the audio buffer and send to the device*/
 	while(freeBytes > 0 && aw->audioFrameQ.size() > 0){
 		//convert AVframe data to audio buffer 
 		AVFrame* frame;
 		aw->audioFrameQ.pop(frame);
-		if()
-	
-	}
-	AVFrame* frame;
-	aw->audioFrameQ.pop(frame); 
+        audioBuffer->readAVFrame(frame);
+        if(freeBytes <= audioBuffer->getSize()){
+            audioBuffer->writeData(audioDevice, freeBytes);
+            freeBytes = 0;
+        } else{
+            int len = audioBuffer->getSize();
+            audioBuffer->writeData(audioDevice, len);
+            freeBytes -= len;
+        }
+    }
 
 }
 
