@@ -18,3 +18,14 @@ HEADERS += \
     audioplayer.h \
     audioworks.h \
     safequeue.h
+
+LIBS += -lavformat \
+        -lavcodec \
+        -lavdevice \
+        -lavfilter \
+        -lswscale \
+        -lavutil \
+        -lswresample \
+        -lSDL -lSDLmain  -lm
+INCLUDEPATH += /usr/local/include/SDL /home/huheng/github/FFmpeg
+

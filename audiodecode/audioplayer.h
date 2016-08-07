@@ -49,11 +49,15 @@ private:
 	/*audio play device*/
     QAudioOutput *audioOutput;
     QIODevice* audioDevice;
+    AudioBuffer* audioBuffer;
+    AudioDecoder* audioDecoder;
+    Demuxer* demuxer;
+
     QTimer* sendTimer;
 	
 	AudioWorks* aw;
-	ThreadObj* demuxer;
-	ThreadObj* audioDecoder;
+    //ThreadObj* demuxer;
+    //ThreadObj* audioDecoder;
 
     /*ui*/
     ClickedSlider* progressSlider;

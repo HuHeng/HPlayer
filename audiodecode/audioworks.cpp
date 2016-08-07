@@ -1,6 +1,11 @@
 #include <iostream>
 #include <thread>
+#include <QIODevice>
 #include "audioworks.h"
+#include <stdio.h>
+#include <string.h>
+
+
 
 AudioWorks::AudioWorks():
 	volume(1.0),
@@ -22,7 +27,7 @@ AudioWorks::~AudioWorks()
 int AudioWorks::openStream(char* filename)
 {
 	int ret = 0;
-	
+    av_register_all();
 	/*open formatctx*/
 	ret = avformat_open_input(&formatCtx, filename, NULL, NULL);
 	if(ret < 0){
@@ -56,7 +61,10 @@ int AudioWorks::openStream(char* filename)
 		std::cout<<"find decoder failed!"<<std::endl;
 		return -1;
 	}
-	ret = avcodec_open2(codecCtx, codec, NULL);
+    AVDictionary *opts = NULL;
+    av_dict_set(&opts, "refcounted_frames", "1", 0);
+
+    ret = avcodec_open2(codecCtx, codec, &opts);
 	if(ret < 0){
 		std::cout<<"open codecCtx failed!"<<std::endl;
 		return -1;
@@ -100,11 +108,18 @@ void Demuxer::run()
 	}
 }
 
+AudioDecoder::AudioDecoder(AudioWorks* audioWorks):aw(audioWorks)
+{
+
+}
+
 void AudioDecoder::run()
 {
-	AVFrame* frame = av_frame_alloc();
+
 	//get a pkt and decode it
+   // AVFrame* frame = av_frame_alloc();
 	for(;;){
+
 		AVPacket pkt;
 		aw->audioPacketQ.pop(pkt);
 		int flush = 0;
@@ -113,23 +128,105 @@ void AudioDecoder::run()
 			flush = 1;
 		
 		//get a frame and push
-		int gotFrame;
+        int gotFrame = 1;
+        AVFrame* frame = NULL;
 		do{
+            if(gotFrame == 1)
+                frame = av_frame_alloc();
 			int ret = avcodec_decode_audio4(aw->codecCtx, frame, &gotFrame, &pkt);
 			if(ret < 0){
 				std::cout<<"decode audio error!"<<std::endl;	
 				break;
 			}
 			if(gotFrame){
-				AVFrame* qFrame = av_frame_alloc();
-				av_frame_move_ref(qFrame, frame);
-				aw->audioFrameQ.push(qFrame);
+                //AVFrame* qFrame = av_frame_alloc();
+                //av_frame_move_ref(qFrame, frame);
+                aw->audioFrameQ.push(frame);
+               // av_frame_free(&frame);
 			}
 			pkt.data += ret;
 			pkt.size -= ret;
 		} while(pkt.size > 0 || (gotFrame && flush));
 	}
-	av_frame_unref(frame);
+    //av_frame_unref(frame);
+    //av_frame_free(&frame);
 }
 
 
+AudioBuffer::AudioBuffer(AudioWorks* AudioWorks):data(NULL),capacity(0),size(0),index(0),aw(AudioWorks),swrCtx(NULL)
+{
+
+}
+
+AudioBuffer::~AudioBuffer(){
+    if(swrCtx)
+        swr_free(&swrCtx);
+    if(data)
+        free(data);
+}
+
+//maybe work
+void AudioBuffer::readAVFrame(AVFrame* frame)
+{
+        swr_free(&swrCtx);
+        swrCtx = swr_alloc_set_opts(NULL,
+                                aw->codecCtx->channel_layout, AV_SAMPLE_FMT_S16, aw->codecCtx->sample_rate,
+                                frame->channel_layout, (AVSampleFormat)frame->format, frame->sample_rate,
+                                0, NULL);
+        swr_init(swrCtx);
+
+    const uint8_t **in = (const uint8_t **)frame->extended_data;
+    uint8_t **out = &data;
+
+    if(capacity < 4*frame->nb_samples){
+        data = (uint8_t*)realloc(data, 4*frame->nb_samples);
+        capacity = 4*frame->nb_samples;
+    }
+    /*
+   int out_count = (int64_t)(frame->nb_samples) *4* aw->codecCtx->sample_rate / frame->sample_rate + 256;
+    int out_size  = av_samples_get_buffer_size(NULL, frame->channels, out_count, AV_SAMPLE_FMT_S16, 0);
+    int len2;
+    if (out_size < 0) {
+        std::cout<<"av_samples_get_buffer_size() failed\n";
+        return;
+    }
+
+
+
+    len2 = swr_convert(swrCtx, out, out_count, in, frame->nb_samples);
+    std::cout<<len2<<"\n";
+    if (len2 < 0) {
+        std::cout<<"swr_convert() failed\n";
+        return;
+    }
+    index = 0;
+    size = len2*2;
+    */
+    /* if a frame has been decoded, output it */
+
+
+    for(int i=0; i < frame->nb_samples; ++i){
+        memcpy(data+i*4, in[0] + i*2, 2);
+        memcpy(data+i*4+2, in[1] + i*2, 2);
+    }
+    index = 0;
+    size = 4*frame->nb_samples;
+
+}
+int AudioBuffer::getSize()
+{
+    return size;
+}
+
+void AudioBuffer::writeData(QIODevice *audioDevice, int len)
+{
+    if(size < len){
+        std::cout<<"no enough size\n";
+        return;
+    }
+    audioDevice->write((const char*)data + index, len);
+    size -= len;
+    index += len;
+    if(size == 0)
+        index = 0;
+}
