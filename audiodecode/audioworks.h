@@ -1,3 +1,6 @@
+#ifndef AUDIOWORKS_H
+#define AUDIOWORKS_H
+
 extern "C"{
 #include "libavformat/avformat.h"
 #include "libavcodec/avcodec.h"
@@ -90,4 +93,16 @@ private:
 	int index;
 };
 
+class AudioOutput
+{
+public:
+    //write audio data to audio device
+    writeAudioData(std::shared_ptr<AudioWorks> aw);
+private:
+    QIODevice audioDevice;
+    QAudioOutput audioOutput;
+};
 
+
+
+#endif

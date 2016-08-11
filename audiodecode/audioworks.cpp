@@ -200,9 +200,6 @@ void AudioBuffer::readAVFrame(AVFrame* frame)
         std::cout<<"av_samples_get_buffer_size() failed\n";
         return;
     }
-
-
-
     len2 = swr_convert(swrCtx, out, out_count, in, frame->nb_samples);
     std::cout<<len2<<"\n";
     if (len2 < 0) {

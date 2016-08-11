@@ -29,7 +29,13 @@ class AudioPlayer : public QWidget
 public:
     AudioPlayer(QWidget* parent = 0);
     ~AudioPlayer();
+
+    //init audioworks, start demuxer and decoder thread
     bool openAudioFile();
+
+    //stop demux and decode threads, destroy audioworks
+    void closeAudioFile();
+
     void stop();
 
     virtual void keyPressEvent(QKeyEvent* e);
@@ -45,7 +51,7 @@ private slots:
     void writeData();
 
 private:
-    QFile *audioFile;
+
 	/*audio play device*/
     QAudioOutput *audioOutput;
     QIODevice* audioDevice;

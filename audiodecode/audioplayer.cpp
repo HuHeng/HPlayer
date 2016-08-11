@@ -27,7 +27,6 @@ void ClickedSlider::mousePressEvent(QMouseEvent* e)
 
 AudioPlayer::AudioPlayer(QWidget* parent)
     : QWidget(parent),
-    audioFile(NULL),
     audioOutput(NULL),
     sendTimer(NULL)
 {
@@ -39,8 +38,6 @@ AudioPlayer::~AudioPlayer()
 {
     if(audioOutput)
         audioOutput->stop();
-    if(audioFile)
-        delete audioFile;
     if(audioOutput)
         delete audioOutput;
     if(sendTimer)
