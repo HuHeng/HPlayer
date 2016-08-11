@@ -194,6 +194,7 @@ void AudioPlayer::keyPressEvent(QKeyEvent *e)
         break;
 	case Qt::Key_Q:
 		/*quit*/
+        
 		aw->abortRequest = 1;
         aw->audioFrameQ.abort();
         aw->audioPacketQ.abort();

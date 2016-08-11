@@ -55,7 +55,7 @@ private:
 
     QTimer* sendTimer;
 	
-	AudioWorks* aw;
+    std::shared_ptr<AudioWorks> aw;
     //ThreadObj* demuxer;
     //ThreadObj* audioDecoder;
 

@@ -22,6 +22,7 @@ AudioWorks::AudioWorks():
 AudioWorks::~AudioWorks()
 {
 	//todo: delete object and free memory
+
 }
 
 int AudioWorks::openStream(char* filename)
@@ -72,8 +73,13 @@ int AudioWorks::openStream(char* filename)
 	return 0;
 }
 
+void AudioWorks::closeStream()
+{
+    avformat_close_input(&formatCtx);
+    avcodec_free_context(&codecCtx);
+}
 
-Demuxer::Demuxer(AudioWorks* audioWorks): aw(audioWorks)
+Demuxer::Demuxer(std::shared_ptr<AudioWorks> audioWorks): aw(audioWorks)
 {
 	
 }
@@ -85,6 +91,8 @@ void Demuxer::run()
 {
 	for(;;)
 	{
+        if(aw->abortRequest == 1)
+            break;
 		AVPacket pkt;
 		av_init_packet(&pkt);
 		pkt.size = 0;
@@ -108,7 +116,7 @@ void Demuxer::run()
 	}
 }
 
-AudioDecoder::AudioDecoder(AudioWorks* audioWorks):aw(audioWorks)
+AudioDecoder::AudioDecoder(std::shared_ptr<AudioWorks> audioWorks):aw(audioWorks)
 {
 
 }
@@ -117,9 +125,10 @@ void AudioDecoder::run()
 {
 
 	//get a pkt and decode it
-   // AVFrame* frame = av_frame_alloc();
+    AVFrame* frame = av_frame_alloc();
 	for(;;){
-
+        if(aw->abortRequest == 1)
+            break;
 		AVPacket pkt;
 		aw->audioPacketQ.pop(pkt);
 		int flush = 0;
@@ -129,31 +138,32 @@ void AudioDecoder::run()
 		
 		//get a frame and push
         int gotFrame = 1;
-        AVFrame* frame = NULL;
+
 		do{
-            if(gotFrame == 1)
-                frame = av_frame_alloc();
+          // if(gotFrame == 1)
+            //    frame = av_frame_alloc();
 			int ret = avcodec_decode_audio4(aw->codecCtx, frame, &gotFrame, &pkt);
 			if(ret < 0){
 				std::cout<<"decode audio error!"<<std::endl;	
 				break;
 			}
 			if(gotFrame){
-                //AVFrame* qFrame = av_frame_alloc();
-                //av_frame_move_ref(qFrame, frame);
-                aw->audioFrameQ.push(frame);
+                AVFrame* qFrame = av_frame_alloc();
+                av_frame_move_ref(qFrame, frame);
+                //maybe wakeup by abortrequest, free frame in the case
+                aw->audioFrameQ.push(qFrame);
                // av_frame_free(&frame);
 			}
 			pkt.data += ret;
 			pkt.size -= ret;
-		} while(pkt.size > 0 || (gotFrame && flush));
+        } while((pkt.size > 0 || (gotFrame && flush)) && aw->abortRequest != 1);
 	}
-    //av_frame_unref(frame);
-    //av_frame_free(&frame);
+    av_frame_unref(frame);
+    av_frame_free(&frame);
 }
 
 
-AudioBuffer::AudioBuffer(AudioWorks* AudioWorks):data(NULL),capacity(0),size(0),index(0),aw(AudioWorks),swrCtx(NULL)
+AudioBuffer::AudioBuffer(std::shared_ptr<AudioWorks> audioWorks):data(NULL),capacity(0),size(0),index(0),aw(audioWorks),swrCtx(NULL)
 {
 
 }

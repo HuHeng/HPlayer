@@ -5,6 +5,7 @@ extern "C"{
 #include "libswresample/swresample.h"
 }
 #include "safequeue.h"
+#include <memory>
 
 class QIODevice;
 
@@ -15,6 +16,7 @@ public:
 	virtual ~AudioWorks();
 	void init();
 	int openStream(char* filename);
+    void closeStream();
 	/*-----------------------------*/
 	/* this class may store status */
 	/* status */
@@ -52,27 +54,27 @@ private:
 class Demuxer: public ThreadObj
 {
 public:
-	Demuxer(AudioWorks* audioWorks);
+    Demuxer(std::shared_ptr<AudioWorks> audioWorks);
 	~Demuxer();
 	/*thread function*/
 	virtual void run();
 private:
-	AudioWorks* aw;
+    std::shared_ptr<AudioWorks> aw;
 };
 
 class AudioDecoder: public ThreadObj
 {
 public:
-    AudioDecoder(AudioWorks* audioWorks);
+    AudioDecoder(std::shared_ptr<AudioWorks> audioWorks);
 	~AudioDecoder();
 	virtual void run();
 private:
-	AudioWorks* aw;
+    std::shared_ptr<AudioWorks> aw;
 };
 
 class AudioBuffer{
 public:
-    AudioBuffer(AudioWorks* AudioWorks);
+    AudioBuffer(std::shared_ptr<AudioWorks> AudioWorks);
     ~AudioBuffer();
 	void readAVFrame(AVFrame* frame);
     void writeData(QIODevice* audioDevice, int len);
@@ -80,7 +82,7 @@ public:
     uint8_t* data;
 private:
   //  QIODevice* audioOutput;
-    AudioWorks* aw;
+    std::shared_ptr<AudioWorks> aw;
 	SwrContext* swrCtx;
 
 	int capacity;
