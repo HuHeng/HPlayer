@@ -12,14 +12,38 @@ extern "C"{
 
 class QIODevice;
 
+/*wrap AVPacket*/
+struct Packet
+{
+    AVPacket pkt;
+    Packet(){
+        av_init_packet(&pkt);
+    }
+    ~Packet(){
+        av_packet_unref(&pkt);
+    }
+};
+
+/*wrap AVFrame*/
+struct Frame
+{
+    AVFrame* frame;
+    Frame(){
+        frame = av_frame_alloc();
+    }
+    ~Frame(){
+        av_frame_unref(frame);
+        av_frame_free(&frame);
+    }
+};
+
+
 class AudioWorks
 {
 public:
 	AudioWorks();
 	virtual ~AudioWorks();
-	void init();
-	int openStream(char* filename);
-    void closeStream();
+    int init(char*);
 	/*-----------------------------*/
 	/* this class may store status */
 	/* status */
@@ -42,16 +66,18 @@ public:
 class ThreadObj
 {
 public:
+    ThreadObj() : pThread(NULL){}
+    ~ThreadObj(){
+    }
 	virtual void run() = 0;
 	void start(){
-		pThread = new std::thread(std::mem_fn(&ThreadObj::run), this);
+        pThread = std::make_shared<std::thread>(std::mem_fn(&ThreadObj::run), this);
 	}
 	void join(){
-		pThread->join();
-		delete pThread;
+        pThread->join();
 	}
 private:
-	std::thread* pThread;
+    std::shared_ptr<std::thread> pThread;
 };
 
 class Demuxer: public ThreadObj
@@ -92,7 +118,7 @@ private:
 	int size;
 	int index;
 };
-
+/*
 class AudioOutput
 {
 public:
@@ -102,7 +128,7 @@ private:
     QIODevice audioDevice;
     QAudioOutput audioOutput;
 };
-
+*/
 
 
 #endif

@@ -48,16 +48,14 @@ public slots:
  //   void resume();
 private slots:
 	void eventLoop();
-    void writeData();
 
 private:
-
 	/*audio play device*/
     QAudioOutput *audioOutput;
     QIODevice* audioDevice;
     AudioBuffer* audioBuffer;
-    AudioDecoder* audioDecoder;
-    Demuxer* demuxer;
+    std::shared_ptr<AudioDecoder> audioDecoder;
+    std::shared_ptr<Demuxer> demuxer;
 
     QTimer* sendTimer;
 	

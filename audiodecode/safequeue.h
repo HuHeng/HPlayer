@@ -51,6 +51,8 @@ void SafeQueue<T, MAXSIZE>::pop(T& data)
 	if(q.empty()){
 		condNotEmpty.wait(lock, [this]{return !q.empty() || abortRequest;});
 	}
+    if(abortRequest)
+        return;
 	data = q.front();
 	q.pop();
 	condNotFull.notify_one();

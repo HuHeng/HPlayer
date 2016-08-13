@@ -22,10 +22,11 @@ AudioWorks::AudioWorks():
 AudioWorks::~AudioWorks()
 {
 	//todo: delete object and free memory
-
+    avcodec_free_context(&codecCtx);
+    avformat_close_input(&formatCtx);
 }
 
-int AudioWorks::openStream(char* filename)
+int AudioWorks::init(char* filename)
 {
 	int ret = 0;
     av_register_all();
@@ -70,13 +71,9 @@ int AudioWorks::openStream(char* filename)
 		std::cout<<"open codecCtx failed!"<<std::endl;
 		return -1;
 	}
-	return 0;
-}
+    /*TODO:init play state*/
 
-void AudioWorks::closeStream()
-{
-    avformat_close_input(&formatCtx);
-    avcodec_free_context(&codecCtx);
+    return 0;
 }
 
 Demuxer::Demuxer(std::shared_ptr<AudioWorks> audioWorks): aw(audioWorks)
@@ -117,6 +114,10 @@ void Demuxer::run()
 }
 
 AudioDecoder::AudioDecoder(std::shared_ptr<AudioWorks> audioWorks):aw(audioWorks)
+{
+
+}
+AudioDecoder::~AudioDecoder()
 {
 
 }

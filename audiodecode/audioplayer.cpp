@@ -55,11 +55,12 @@ bool AudioPlayer::openAudioFile()
     //used shared_ptr
     aw = std::make_shared<AudioWorks>();
 	//test mp3
-	aw->openStream("/home/huheng/andy.mp3");
-	//create demuxer and decoder
+    if(aw->init("/home/huheng/andy.mp3") < 0)
+        return false;
 
-	demuxer = new Demuxer(aw);
-    audioDecoder = new AudioDecoder(aw);
+	//create demuxer and decoder
+    demuxer = std::make_shared<Demuxer>(aw);
+    audioDecoder = std::make_shared<AudioDecoder>(aw);
     audioBuffer = new AudioBuffer(aw);
 	//set QAudioFormat
 	openAudioOutput();
@@ -130,32 +131,6 @@ void AudioPlayer::eventLoop()
 
 }
 
-
-void AudioPlayer::writeData()
-{
-    //48000*2*2/1000*30
-    int freeBytes = audioOutput->bytesFree();
- //   qDebug()<<"freeBytes:"<<freeBytes;
-    if(freeBytes <= 0)
-        return;
-    //send freeBytes to io device
-    //FIXME: should alloc a iocontext, then the buffer alloc once
-    char* buffer = (char*)malloc(freeBytes);
-    qint64 readbytes = audioFile->read(buffer, freeBytes);
-    if(readbytes <= 0){
-        //the end
-        audioFile->close();
-        free(buffer);
-        sendTimer->stop();
-     //   audioOutput->stop();
-        return;
-    }
-//    qDebug()<<"offset"<<freeBytes;
-//    qDebug()<<"pos"<<audioFile->pos();
-    audioDevice->write(buffer, readbytes);
-    free(buffer);
-}
-
 void AudioPlayer::keyPressEvent(QKeyEvent *e)
 {
     /*
@@ -193,8 +168,7 @@ void AudioPlayer::keyPressEvent(QKeyEvent *e)
 		/*quit*/
 		aw->abortRequest = 1;
         aw->audioFrameQ.abort();
-        aw->audioPacketQ.abort();
-        aw->closeStream();
+        aw->audioPacketQ.abort();       
         sendTimer->stop();
 		break;
     }
