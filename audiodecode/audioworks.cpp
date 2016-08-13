@@ -90,26 +90,25 @@ void Demuxer::run()
 	{
         if(aw->abortRequest == 1)
             break;
-		AVPacket pkt;
-		av_init_packet(&pkt);
-		pkt.size = 0;
-		pkt.data = NULL;
-		int ret = av_read_frame(aw->formatCtx, &pkt);
+        auto sharedPkt = std::make_shared<Packet>();
+        //av_init_packet(&pkt);
+        AVPacket* ppkt = &sharedPkt->pkt;
+        ppkt->size = 0;
+        ppkt->data = NULL;
+        int ret = av_read_frame(aw->formatCtx, ppkt);
 		//end of stream, put null packet flush the remaining frames
 		if((ret == AVERROR_EOF || avio_feof(aw->formatCtx->pb)) && !aw->eof){
-			pkt.size = 0;
-			pkt.data = NULL;
-			aw->audioPacketQ.push(pkt);
+            ppkt->size = 0;
+            ppkt->data = NULL;
+            aw->audioPacketQ.push(sharedPkt);
 			aw->eof = true;
 			//FIXME: maybe stop
 			break;
 		}
 		/*push the audio packet*/
-		if(pkt.stream_index == aw->audioIndex){
-			aw->audioPacketQ.push(pkt);	
-		} else{
-			av_packet_unref(&pkt);
-		}
+        if(ppkt->stream_index == aw->audioIndex){
+            aw->audioPacketQ.push(sharedPkt);
+        }
 	}
 }
 
@@ -126,41 +125,38 @@ void AudioDecoder::run()
 {
 
 	//get a pkt and decode it
-    AVFrame* frame = av_frame_alloc();
-	for(;;){
+    //AVFrame* frame = av_frame_alloc();
+    auto sharedFrame = std::make_shared<Frame>();
+    for(;;){
         if(aw->abortRequest == 1)
             break;
-		AVPacket pkt;
-		aw->audioPacketQ.pop(pkt);
+        std::shared_ptr<Packet> sharedPacket;
+        aw->audioPacketQ.pop(sharedPacket);
+        AVPacket* ppkt = &sharedPacket->pkt;
 		int flush = 0;
 		//flush the left frame
-		if(pkt.size == 0 && pkt.data == NULL)
-			flush = 1;
-		
+        if(ppkt->size == 0 && ppkt->data == NULL)
+			flush = 1;	
+
 		//get a frame and push
         int gotFrame = 1;
-
+        AVFrame* frame = sharedFrame->frame;
 		do{
-          // if(gotFrame == 1)
-            //    frame = av_frame_alloc();
-			int ret = avcodec_decode_audio4(aw->codecCtx, frame, &gotFrame, &pkt);
+            int ret = avcodec_decode_audio4(aw->codecCtx, frame, &gotFrame, ppkt);
 			if(ret < 0){
 				std::cout<<"decode audio error!"<<std::endl;	
 				break;
 			}
 			if(gotFrame){
-                AVFrame* qFrame = av_frame_alloc();
-                av_frame_move_ref(qFrame, frame);
-                //maybe wakeup by abortrequest, free frame in the case
+                //AVFrame* qFrame = av_frame_alloc();
+                auto qFrame = std::make_shared<Frame>();
+                av_frame_move_ref(qFrame->frame, frame);
                 aw->audioFrameQ.push(qFrame);
-               // av_frame_free(&frame);
 			}
-			pkt.data += ret;
-			pkt.size -= ret;
-        } while((pkt.size > 0 || (gotFrame && flush)) && aw->abortRequest != 1);
+            ppkt->data += ret;
+            ppkt->size -= ret;
+        } while((ppkt->size > 0 || (gotFrame && flush)) && aw->abortRequest != 1);
 	}
-    av_frame_unref(frame);
-    av_frame_free(&frame);
 }
 
 

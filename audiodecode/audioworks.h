@@ -53,8 +53,8 @@ public:
 	char* filename;
 	bool eof; /*end of file*/
 	bool abortRequest;
-    SafeQueue<AVPacket, 100> audioPacketQ;
-    SafeQueue<AVFrame*, 100> audioFrameQ;
+    SafeQueue<std::shared_ptr<Packet>, 100> audioPacketQ;
+    SafeQueue<std::shared_ptr<Frame>, 100> audioFrameQ;
 	/* ffmpeg struct */
 	AVFormatContext* formatCtx;
 	AVCodecContext* codecCtx;

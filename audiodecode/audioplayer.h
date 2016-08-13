@@ -53,7 +53,7 @@ private:
 	/*audio play device*/
     QAudioOutput *audioOutput;
     QIODevice* audioDevice;
-    AudioBuffer* audioBuffer;
+    std::shared_ptr<AudioBuffer> audioBuffer;
     std::shared_ptr<AudioDecoder> audioDecoder;
     std::shared_ptr<Demuxer> demuxer;
 

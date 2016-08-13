@@ -61,7 +61,7 @@ bool AudioPlayer::openAudioFile()
 	//create demuxer and decoder
     demuxer = std::make_shared<Demuxer>(aw);
     audioDecoder = std::make_shared<AudioDecoder>(aw);
-    audioBuffer = new AudioBuffer(aw);
+    audioBuffer = std::make_shared<AudioBuffer>(aw);
 	//set QAudioFormat
 	openAudioOutput();
 
@@ -116,9 +116,9 @@ void AudioPlayer::eventLoop()
 	/*second, convert the avframe to the audio buffer and send to the device*/
 	while(freeBytes > 0 && aw->audioFrameQ.size() > 0){
 		//convert AVframe data to audio buffer 
-		AVFrame* frame;
-		aw->audioFrameQ.pop(frame);
-        audioBuffer->readAVFrame(frame);
+        std::shared_ptr<Frame> sharedFrame;
+        aw->audioFrameQ.pop(sharedFrame);
+        audioBuffer->readAVFrame(sharedFrame->frame);
         if(freeBytes <= audioBuffer->getSize()){
             audioBuffer->writeData(audioDevice, freeBytes);
             freeBytes = 0;
@@ -168,7 +168,9 @@ void AudioPlayer::keyPressEvent(QKeyEvent *e)
 		/*quit*/
 		aw->abortRequest = 1;
         aw->audioFrameQ.abort();
-        aw->audioPacketQ.abort();       
+        aw->audioPacketQ.abort();
+        demuxer->join();
+        audioDecoder->join();
         sendTimer->stop();
 		break;
     }
