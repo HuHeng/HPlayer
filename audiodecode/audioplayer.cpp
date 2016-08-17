@@ -4,34 +4,32 @@
 #include <QFile>
 #include <QTimer>
 #include <QMouseEvent>
+#include <QHBoxLayout>
+#include <QVBoxLayout>
+
 #include <iostream>
 #include "audioplayer.h"
+#include "playerui.h"
 
 const int T_VAL = 10; //millsec
 const double volumeDelta = 0.1;
 
-/*a slider can response to click*/
-ClickedSlider::ClickedSlider(QWidget * parent):QSlider(parent)
-{
-    setOrientation(Qt::Horizontal);
-}
-
-void ClickedSlider::mousePressEvent(QMouseEvent* e)
-{
-    QSlider::mousePressEvent(e);
-    qDebug()<<"x:"<<e->pos().x()<<"  y:"<<e->pos().y();
-    double pos = (maximum()-minimum()) * ((double)e->pos().x()/width()) + minimum();
-    qDebug()<<"max: "<<maximum()<<" min:"<<minimum()<<" width:"<<width()<<" pos:"<<pos;
-    setValue(pos);
-}
-
 AudioPlayer::AudioPlayer(QWidget* parent)
-    : QWidget(parent),
+    : QMainWindow(parent),
     audioOutput(NULL),
     sendTimer(NULL)
 {
     /*creat controls and setup ui*/
   //  audioOutput = new QAudioOutput;
+   QWidget* centerW = new QWidget(parent);
+   this->setCentralWidget(centerW);
+
+   QBoxLayout *controlLayout = new QHBoxLayout;
+   controlLayout->setMargin(0);
+   controlLayout->addWidget(openButton);
+   controlLayout->addWidget(playButton);
+   controlLayout->addWidget(positionSlider);
+
 }
 
 AudioPlayer::~AudioPlayer()
@@ -75,6 +73,16 @@ bool AudioPlayer::openAudioFile()
 
 }
 
+void AudioPlayer::closeAudioFile()
+{
+    aw->abortRequest = 1;
+    aw->audioFrameQ.abort();
+    aw->audioPacketQ.abort();
+    demuxer->join();
+    audioDecoder->join();
+    sendTimer->stop();
+}
+
 void AudioPlayer::openAudioOutput()
 {
 
@@ -95,13 +103,7 @@ void AudioPlayer::openAudioOutput()
 
 
 void AudioPlayer::eventLoop()
-{
-    if(aw->abortRequest){
-        demuxer->join();
-        audioDecoder->join();
-        sendTimer->stop();
-        std::cout<<"q: "<<std::this_thread::get_id()<<std::endl;
-    }
+{    
     /*about 10ms per loop*/
     int freeBytes = audioOutput->bytesFree();
 	if(freeBytes <= 0)
@@ -129,6 +131,13 @@ void AudioPlayer::eventLoop()
         }
     }
 
+
+}
+
+void AudioPlayer::closeEvent(QCloseEvent* event)
+{
+    closeAudioFile();
+    event->accept();
 }
 
 void AudioPlayer::keyPressEvent(QKeyEvent *e)
@@ -166,12 +175,7 @@ void AudioPlayer::keyPressEvent(QKeyEvent *e)
         break;
 	case Qt::Key_Q:
 		/*quit*/
-		aw->abortRequest = 1;
-        aw->audioFrameQ.abort();
-        aw->audioPacketQ.abort();
-        demuxer->join();
-        audioDecoder->join();
-        sendTimer->stop();
+        closeAudioFile();
 		break;
     }
 }

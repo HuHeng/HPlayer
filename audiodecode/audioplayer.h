@@ -1,7 +1,7 @@
 #ifndef AUDIOPLAYER_H
 #define AUDIOPLAYER_H
 
-#include <QWidget>
+#include <QMainWindow>
 #include <QSlider>
 #include "audioworks.h"
 
@@ -9,20 +9,9 @@ class QFile;
 class QAudioOutput;
 class QAudioFormat;
 class QTimer;
+class ClickedSlider;
 
-class ClickedSlider : public QSlider
-{
-    Q_OBJECT
-public:
-    ClickedSlider(QWidget* parent = 0);
-    ~ClickedSlider(){}
-protected:
-    virtual void mousePressEvent(QMouseEvent* e);
-
-};
-
-
-class AudioPlayer : public QWidget
+class AudioPlayer : public QMainWindow
 {
     Q_OBJECT
 
@@ -39,7 +28,7 @@ public:
     void stop();
 
     virtual void keyPressEvent(QKeyEvent* e);
-
+    virtual void closeEvent(QCloseEvent* e);
 	void openAudioOutput();
 public slots:
  //   void seek();
@@ -66,6 +55,7 @@ private:
     /*ui*/
     ClickedSlider* progressSlider;
     ClickedSlider* volumSlider;
+    QPressButton* openButton;
 };
 
 #endif // AUDIOPLAYER_H

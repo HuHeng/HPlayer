@@ -12,12 +12,14 @@ TEMPLATE = app
 
 SOURCES += main.cpp \
     audioplayer.cpp \
-    audioworks.cpp
+    audioworks.cpp \
+    playerui.cpp
 
 HEADERS += \
     audioplayer.h \
     audioworks.h \
-    safequeue.h
+    safequeue.h \
+    playerui.h
 
 LIBS += -lavformat \
         -lavcodec \
