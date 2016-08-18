@@ -1,11 +1,14 @@
 #include <QAudioOutput>
 #include <QAudioFormat>
 #include <QDebug>
-#include <QFile>
+
 #include <QTimer>
 #include <QMouseEvent>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
+#include <QGridLayout>
+#include <QLineEdit>
+#include <QPushButton>
 
 #include <iostream>
 #include "audioplayer.h"
@@ -21,14 +24,35 @@ AudioPlayer::AudioPlayer(QWidget* parent)
 {
     /*creat controls and setup ui*/
   //  audioOutput = new QAudioOutput;
-   QWidget* centerW = new QWidget(parent);
-   this->setCentralWidget(centerW);
+    QWidget* centerW = new QWidget;
+    this->setCentralWidget(centerW);
+    //this->setLayout();
+    //progress layout
+    QGridLayout *progressLayout = new QGridLayout;
+    progressSlider = new ClickedSlider;
+    durationEdit = new QLineEdit;
+    progressLayout->addWidget(progressSlider,0,0);
+    progressLayout->addWidget(durationEdit,0,1);
+    progressLayout->setColumnStretch(0,4);
+    progressLayout->setColumnStretch(1,1);
 
-   QBoxLayout *controlLayout = new QHBoxLayout;
-   controlLayout->setMargin(0);
-   controlLayout->addWidget(openButton);
-   controlLayout->addWidget(playButton);
-   controlLayout->addWidget(positionSlider);
+    //control layout
+    openButton = new QPushButton;
+    stopButton = new QPushButton;
+    volumeSlider = new ClickedSlider;
+    QBoxLayout *controlLayout = new QHBoxLayout;
+    controlLayout->setMargin(0);
+    controlLayout->addWidget(openButton);
+    controlLayout->addWidget(stopButton);
+    controlLayout->addWidget(volumeSlider);
+
+    //set center widget layout
+    QBoxLayout *layout = new QVBoxLayout;
+    videoWidget = new QWidget;
+    layout->addWidget(videoWidget);
+    layout->addLayout(progressLayout);
+    layout->addLayout(controlLayout);
+    centerW->setLayout(layout);
 
 }
 

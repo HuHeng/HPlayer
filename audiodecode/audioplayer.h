@@ -10,6 +10,9 @@ class QAudioOutput;
 class QAudioFormat;
 class QTimer;
 class ClickedSlider;
+class QLineEdit;
+class QWidget;
+class QPushButton;
 
 class AudioPlayer : public QMainWindow
 {
@@ -54,8 +57,11 @@ private:
 
     /*ui*/
     ClickedSlider* progressSlider;
-    ClickedSlider* volumSlider;
-    QPressButton* openButton;
+    QLineEdit* durationEdit;
+    ClickedSlider* volumeSlider;
+    QPushButton* openButton;
+    QPushButton* stopButton;
+    QWidget* videoWidget;
 };
 
 #endif // AUDIOPLAYER_H
