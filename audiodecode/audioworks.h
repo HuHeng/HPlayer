@@ -43,7 +43,7 @@ class AudioWorks
 public:
 	AudioWorks();
 	virtual ~AudioWorks();
-    int init(char*);
+    int init(const char*);
 	/*-----------------------------*/
 	/* this class may store status */
 	/* status */
@@ -74,7 +74,8 @@ public:
         pThread = std::make_shared<std::thread>(std::mem_fn(&ThreadObj::run), this);
 	}
 	void join(){
-        pThread->join();
+        if(pThread->joinable())
+            pThread->join();
 	}
 private:
     std::shared_ptr<std::thread> pThread;

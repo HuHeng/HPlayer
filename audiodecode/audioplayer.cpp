@@ -9,6 +9,7 @@
 #include <QGridLayout>
 #include <QLineEdit>
 #include <QPushButton>
+#include <QFileDialog>
 
 #include <iostream>
 #include "audioplayer.h"
@@ -23,10 +24,7 @@ AudioPlayer::AudioPlayer(QWidget* parent)
     sendTimer(NULL)
 {
     /*creat controls and setup ui*/
-  //  audioOutput = new QAudioOutput;
-    QWidget* centerW = new QWidget;
-    this->setCentralWidget(centerW);
-    //this->setLayout();
+
     //progress layout
     QGridLayout *progressLayout = new QGridLayout;
     progressSlider = new ClickedSlider;
@@ -37,14 +35,17 @@ AudioPlayer::AudioPlayer(QWidget* parent)
     progressLayout->setColumnStretch(1,1);
 
     //control layout
-    openButton = new QPushButton;
-    stopButton = new QPushButton;
+    openButton = new QPushButton(tr("open..."));
+    connect(openButton, SIGNAL(clicked()), this, SLOT(openAudioFile()));
+    stopButton = new QPushButton(tr("stop"));
+    connect(stopButton, SIGNAL(clicked()), this, SLOT(closeAudioFile()));
     volumeSlider = new ClickedSlider;
     QBoxLayout *controlLayout = new QHBoxLayout;
     controlLayout->setMargin(0);
     controlLayout->addWidget(openButton);
     controlLayout->addWidget(stopButton);
     controlLayout->addWidget(volumeSlider);
+    controlLayout->addStretch(2);
 
     //set center widget layout
     QBoxLayout *layout = new QVBoxLayout;
@@ -52,8 +53,11 @@ AudioPlayer::AudioPlayer(QWidget* parent)
     layout->addWidget(videoWidget);
     layout->addLayout(progressLayout);
     layout->addLayout(controlLayout);
-    centerW->setLayout(layout);
 
+    QWidget* centerW = new QWidget;
+    centerW->setLayout(layout);
+    this->setCentralWidget(centerW);
+    this->resize(320,240);
 }
 
 AudioPlayer::~AudioPlayer()
@@ -73,11 +77,17 @@ AudioPlayer::~AudioPlayer()
 */
 bool AudioPlayer::openAudioFile()
 {
+    //open file dialog
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Open Movie"),QDir::homePath());
+
+    if (fileName.isEmpty()) {
+        return false;
+    }
 	/*open stream and init format Ctx and Codec Ctx*/
     //used shared_ptr
     aw = std::make_shared<AudioWorks>();
 	//test mp3
-    if(aw->init("/home/huheng/andy.mp3") < 0)
+    if(aw->init(fileName.toStdString().c_str()) < 0)
         return false;
 
 	//create demuxer and decoder
@@ -99,6 +109,7 @@ bool AudioPlayer::openAudioFile()
 
 void AudioPlayer::closeAudioFile()
 {
+    //shared_ptr was safe
     aw->abortRequest = 1;
     aw->audioFrameQ.abort();
     aw->audioPacketQ.abort();
@@ -162,6 +173,11 @@ void AudioPlayer::closeEvent(QCloseEvent* event)
 {
     closeAudioFile();
     event->accept();
+}
+
+void AudioPlayer::setVolum(int volum)
+{
+
 }
 
 void AudioPlayer::keyPressEvent(QKeyEvent *e)

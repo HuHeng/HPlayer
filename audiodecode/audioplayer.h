@@ -20,24 +20,25 @@ class AudioPlayer : public QMainWindow
 
 public:
     AudioPlayer(QWidget* parent = 0);
-    ~AudioPlayer();
+    ~AudioPlayer();   
+    void stop();
 
+    virtual void keyPressEvent(QKeyEvent* e);
+    virtual void closeEvent(QCloseEvent* e);
+	void openAudioOutput();
+
+public slots:
     //init audioworks, start demuxer and decoder thread
     bool openAudioFile();
 
     //stop demux and decode threads, destroy audioworks
     void closeAudioFile();
 
-    void stop();
-
-    virtual void keyPressEvent(QKeyEvent* e);
-    virtual void closeEvent(QCloseEvent* e);
-	void openAudioOutput();
-public slots:
  //   void seek();
- //   void setVolum(int volum);
+    void setVolum(int volum);
 //    void suspend();
  //   void resume();
+
 private slots:
 	void eventLoop();
 

@@ -26,7 +26,7 @@ AudioWorks::~AudioWorks()
     avformat_close_input(&formatCtx);
 }
 
-int AudioWorks::init(char* filename)
+int AudioWorks::init(const char* filename)
 {
 	int ret = 0;
     av_register_all();
