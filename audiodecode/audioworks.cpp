@@ -175,13 +175,13 @@ AudioBuffer::~AudioBuffer(){
 //maybe work
 void AudioBuffer::readAVFrame(AVFrame* frame)
 {
-        swr_free(&swrCtx);
+    if(!swrCtx){
         swrCtx = swr_alloc_set_opts(NULL,
-                                aw->codecCtx->channel_layout, AV_SAMPLE_FMT_S16, aw->codecCtx->sample_rate,
-                                frame->channel_layout, (AVSampleFormat)frame->format, frame->sample_rate,
-                                0, NULL);
+                                    aw->codecCtx->channel_layout, AV_SAMPLE_FMT_S16, aw->codecCtx->sample_rate,
+                                    frame->channel_layout, (AVSampleFormat)frame->format, frame->sample_rate,
+                                    0, NULL);
         swr_init(swrCtx);
-
+    }
     const uint8_t **in = (const uint8_t **)frame->extended_data;
     uint8_t **out = &data;
 
@@ -189,32 +189,35 @@ void AudioBuffer::readAVFrame(AVFrame* frame)
         data = (uint8_t*)realloc(data, 4*frame->nb_samples);
         capacity = 4*frame->nb_samples;
     }
-    /*
+
    int out_count = (int64_t)(frame->nb_samples) *4* aw->codecCtx->sample_rate / frame->sample_rate + 256;
-    int out_size  = av_samples_get_buffer_size(NULL, frame->channels, out_count, AV_SAMPLE_FMT_S16, 0);
+   /*
+   int out_size  = av_samples_get_buffer_size(NULL, frame->channels, out_count, AV_SAMPLE_FMT_S16, 0);
     int len2;
     if (out_size < 0) {
         std::cout<<"av_samples_get_buffer_size() failed\n";
         return;
     }
-    len2 = swr_convert(swrCtx, out, out_count, in, frame->nb_samples);
+    */
+
+    int len2 = swr_convert(swrCtx, out, out_count, in, frame->nb_samples);
     std::cout<<len2<<"\n";
     if (len2 < 0) {
         std::cout<<"swr_convert() failed\n";
         return;
     }
     index = 0;
-    size = len2*2;
-    */
+    size = aw->codecCtx->channels * len2*av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
+
     /* if a frame has been decoded, output it */
-
-
+/*
     for(int i=0; i < frame->nb_samples; ++i){
         memcpy(data+i*4, in[0] + i*2, 2);
         memcpy(data+i*4+2, in[1] + i*2, 2);
     }
-    index = 0;
-    size = 4*frame->nb_samples;
+*/
+ //   index = 0;
+  //  size = 4*frame->nb_samples;
 
 }
 int AudioBuffer::getSize()
