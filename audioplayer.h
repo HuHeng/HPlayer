@@ -19,6 +19,12 @@ class AudioPlayer : public QMainWindow
     Q_OBJECT
 
 public:
+    enum State{
+        StopedState,
+        PlayingState,
+        PauseingState
+    };
+
     AudioPlayer(QWidget* parent = 0);
     ~AudioPlayer();   
     void stop();
@@ -53,8 +59,7 @@ private:
     QTimer* sendTimer;
 	
     std::shared_ptr<AudioWorks> aw;
-    //ThreadObj* demuxer;
-    //ThreadObj* audioDecoder;
+    State playerState;
 
     /*ui*/
     ClickedSlider* progressSlider;

@@ -29,5 +29,5 @@ LIBS += -lavformat \
         -lavutil \
         -lswresample \
         -lSDL -lSDLmain  -lm
-INCLUDEPATH += /usr/local/include/SDL /home/huheng/github/FFmpeg
+INCLUDEPATH += /home/huheng/github/FFmpeg
 

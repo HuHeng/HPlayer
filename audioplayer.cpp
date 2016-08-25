@@ -21,7 +21,8 @@ const double volumeDelta = 0.1;
 AudioPlayer::AudioPlayer(QWidget* parent)
     : QMainWindow(parent),
     audioOutput(NULL),
-    sendTimer(NULL)
+    sendTimer(NULL),
+    playerState(StopedState)
 {
     /*creat controls and setup ui*/
 
@@ -83,6 +84,10 @@ bool AudioPlayer::openAudioFile()
     if (fileName.isEmpty()) {
         return false;
     }
+    if(playerState != StopedState)
+    {
+        closeAudioFile();
+    }
 	/*open stream and init format Ctx and Codec Ctx*/
     //used shared_ptr
     aw = std::make_shared<AudioWorks>();
@@ -104,18 +109,21 @@ bool AudioPlayer::openAudioFile()
 	sendTimer = new QTimer();
     connect(sendTimer, SIGNAL(timeout()), this, SLOT(eventLoop()));
     sendTimer->start(T_VAL);
-
+    playerState = PlayingState;
 }
 
 void AudioPlayer::closeAudioFile()
 {
-    //shared_ptr was safe
+    if(playerState == StopedState)
+        return;
+    playerState = StopedState;
     aw->abortRequest = 1;
     aw->audioFrameQ.abort();
     aw->audioPacketQ.abort();
     demuxer->join();
     audioDecoder->join();
-    sendTimer->stop();
+    if(sendTimer)
+        sendTimer->stop();
 }
 
 void AudioPlayer::openAudioOutput()
