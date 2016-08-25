@@ -184,10 +184,10 @@ void AudioBuffer::readAVFrame(AVFrame* frame)
     }
     const uint8_t **in = (const uint8_t **)frame->extended_data;
     uint8_t **out = &data;
-
-    if(capacity < 4*frame->nb_samples){
-        data = (uint8_t*)realloc(data, 4*frame->nb_samples);
-        capacity = 4*frame->nb_samples;
+    int bufLen = aw->codecCtx->channels * frame->nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
+    if(capacity < bufLen){
+        data = (uint8_t*)realloc(data, bufLen);
+        capacity = bufLen;
     }
 
    int out_count = (int64_t)(frame->nb_samples) *4* aw->codecCtx->sample_rate / frame->sample_rate + 256;
@@ -207,7 +207,7 @@ void AudioBuffer::readAVFrame(AVFrame* frame)
         return;
     }
     index = 0;
-    size = aw->codecCtx->channels * len2*av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
+    size = aw->codecCtx->channels * len2 * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
 
     /* if a frame has been decoded, output it */
 /*
