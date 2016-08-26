@@ -48,9 +48,8 @@ public:
     int init(const char*);
 	/*-----------------------------*/
 	/* this class may store status */
-	/* status */
-	/* range: 0-1.0 */
-	double volume;
+    /* range: 0-100 corresponding to the volumeSlider value*/
+    int volume;
 	double pos;
 	char* filename;
 	bool eof; /*end of file*/
@@ -59,7 +58,7 @@ public:
     SafeQueue<std::shared_ptr<Frame>, 100> audioFrameQ;
 	/* ffmpeg struct */
 	AVFormatContext* formatCtx;
-	AVCodecContext* codecCtx;
+    AVCodecContext* audioCodecCtx;
 
 	int audioIndex;
 };

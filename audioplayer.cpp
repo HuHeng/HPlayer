@@ -16,7 +16,7 @@
 #include "playerui.h"
 
 const int T_VAL = 10; //millsec
-const double volumeDelta = 0.1;
+const double volumeDelta = 10;
 
 AudioPlayer::AudioPlayer(QWidget* parent)
     : QMainWindow(parent),
@@ -30,6 +30,8 @@ AudioPlayer::AudioPlayer(QWidget* parent)
     QGridLayout *progressLayout = new QGridLayout;
     progressSlider = new ClickedSlider;
     durationEdit = new QLineEdit;
+    durationEdit->setReadOnly(true);
+
     progressLayout->addWidget(progressSlider,0,0);
     progressLayout->addWidget(durationEdit,0,1);
     progressLayout->setColumnStretch(0,4);
@@ -40,7 +42,12 @@ AudioPlayer::AudioPlayer(QWidget* parent)
     connect(openButton, SIGNAL(clicked()), this, SLOT(openAudioFile()));
     stopButton = new QPushButton(tr("stop"));
     connect(stopButton, SIGNAL(clicked()), this, SLOT(closeAudioFile()));
+
     volumeSlider = new ClickedSlider;
+    volumeSlider->setMinimum(0);
+    volumeSlider->setMaximum(MaxVolume);
+    connect(volumeSlider, SIGNAL(valueChanged(int)), this, SLOT(setVolume(int)));
+
     QBoxLayout *controlLayout = new QHBoxLayout;
     controlLayout->setMargin(0);
     controlLayout->addWidget(openButton);
@@ -94,7 +101,7 @@ bool AudioPlayer::openAudioFile()
 	//test mp3
     if(aw->init(fileName.toStdString().c_str()) < 0)
         return false;
-
+    volumeSlider->setValue(aw->volume);
 	//create demuxer and decoder
     demuxer = std::make_shared<Demuxer>(aw);
     audioDecoder = std::make_shared<AudioDecoder>(aw);
@@ -130,8 +137,8 @@ void AudioPlayer::openAudioOutput()
 {
 
     QAudioFormat audioFormat;
-    audioFormat.setSampleRate(aw->codecCtx->sample_rate);
-    audioFormat.setChannelCount(aw->codecCtx->channels);
+    audioFormat.setSampleRate(aw->audioCodecCtx->sample_rate);
+    audioFormat.setChannelCount(aw->audioCodecCtx->channels);
     audioFormat.setCodec("audio/pcm");
 	/* the system endian*/
     audioFormat.setByteOrder(QAudioFormat::LittleEndian);
@@ -161,9 +168,12 @@ void AudioPlayer::closeEvent(QCloseEvent* event)
     event->accept();
 }
 
-void AudioPlayer::setVolum(int volum)
+void AudioPlayer::setVolume(int volume)
 {
-
+    if(playerState == StopedState)
+        return;
+    aw->volume = volume;
+    audioOutput->setVolume((qreal)volume/MaxVolume);
 }
 
 void AudioPlayer::keyPressEvent(QKeyEvent *e)
@@ -172,24 +182,22 @@ void AudioPlayer::keyPressEvent(QKeyEvent *e)
      * audio volume and audio state should be stored in a context
        thus prevented unnecessay getting value;
     */
-    qreal v;
+    int v;
     bool pause;
     switch(e->key()){
     case Qt::Key_Down:
-        v = audioOutput->volume();
-        qDebug()<<"current volume:"<<v;
-        v -= volumeDelta;
-        v = v > 0 ? v : 0;
-        audioOutput->setVolume(v);
-        qDebug()<<"set volume:"<<v;
+        aw->volume -= volumeDelta;
+        if(aw->volume < 0)
+            aw->volume = 0;
+        setVolume(aw->volume);
+        qDebug()<<"set volume:"<<aw->volume;
         break;
     case Qt::Key_Up:
-        v = audioOutput->volume();
-        qDebug()<<"current volume:"<<v;
-        v += volumeDelta;
-        v = v > 1 ? 1 : v;
-        audioOutput->setVolume(v);
-        qDebug()<<"set volume:"<<v;
+        aw->volume += volumeDelta;
+        if(aw->volume > MaxVolume)
+            aw->volume = MaxVolume;
+        setVolume(aw->volume);
+        qDebug()<<"set volume:"<<aw->volume;
         break;
     case Qt::Key_Space:
         std::cout<<std::this_thread::get_id()<<std::endl;

@@ -8,13 +8,13 @@
 
 
 AudioWorks::AudioWorks():
-	volume(1.0),
+    volume(80),
 	pos(0),
 	filename(NULL),
 	eof(false),
 	abortRequest(false),
 	formatCtx(NULL),
-	codecCtx(NULL)
+    audioCodecCtx(NULL)
 {
 
 }
@@ -22,7 +22,7 @@ AudioWorks::AudioWorks():
 AudioWorks::~AudioWorks()
 {
 	//todo: delete object and free memory
-    avcodec_free_context(&codecCtx);
+    avcodec_free_context(&audioCodecCtx);
     avformat_close_input(&formatCtx);
 }
 
@@ -50,15 +50,15 @@ int AudioWorks::init(const char* filename)
 		return audioStreamIndex;
 	}
 	audioIndex = audioStreamIndex;
-	/*alloc codecctx and open it*/
-	codecCtx = avcodec_alloc_context3(NULL);	
-	if(codecCtx == NULL){
+    /*alloc audioCodecCtx and open it*/
+    audioCodecCtx = avcodec_alloc_context3(NULL);
+    if(audioCodecCtx == NULL){
 		std::cout<<"alloc AVCodecContext failed!"<<std::endl;
 		return -1;
 	}
-	ret = avcodec_parameters_to_context(codecCtx, formatCtx->streams[audioStreamIndex]->codecpar);
+    ret = avcodec_parameters_to_context(audioCodecCtx, formatCtx->streams[audioStreamIndex]->codecpar);
 	/*find the decode type*/
-	AVCodec* codec = avcodec_find_decoder(codecCtx->codec_id);
+    AVCodec* codec = avcodec_find_decoder(audioCodecCtx->codec_id);
 	if(codec == NULL){
 		std::cout<<"find decoder failed!"<<std::endl;
 		return -1;
@@ -66,9 +66,9 @@ int AudioWorks::init(const char* filename)
     AVDictionary *opts = NULL;
     av_dict_set(&opts, "refcounted_frames", "1", 0);
 
-    ret = avcodec_open2(codecCtx, codec, &opts);
+    ret = avcodec_open2(audioCodecCtx, codec, &opts);
 	if(ret < 0){
-		std::cout<<"open codecCtx failed!"<<std::endl;
+        std::cout<<"open audioCodecCtx failed!"<<std::endl;
 		return -1;
 	}
     /*TODO:init play state*/
@@ -142,7 +142,7 @@ void AudioDecoder::run()
         int gotFrame = 1;
         AVFrame* frame = sharedFrame->frame;
 		do{
-            int ret = avcodec_decode_audio4(aw->codecCtx, frame, &gotFrame, ppkt);
+            int ret = avcodec_decode_audio4(aw->audioCodecCtx, frame, &gotFrame, ppkt);
 			if(ret < 0){
 				std::cout<<"decode audio error!"<<std::endl;	
 				break;
@@ -188,20 +188,20 @@ void AudioOutput::readAVFrame(AVFrame* frame)
 {
     if(!swrCtx){
         swrCtx = swr_alloc_set_opts(NULL,
-                                    aw->codecCtx->channel_layout, AV_SAMPLE_FMT_S16, aw->codecCtx->sample_rate,
+                                    aw->audioCodecCtx->channel_layout, AV_SAMPLE_FMT_S16, aw->audioCodecCtx->sample_rate,
                                     frame->channel_layout, (AVSampleFormat)frame->format, frame->sample_rate,
                                     0, NULL);
         swr_init(swrCtx);
     }
     const uint8_t **in = (const uint8_t **)frame->extended_data;
     uint8_t **out = &data;
-    int bufLen = aw->codecCtx->channels * frame->nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
+    int bufLen = aw->audioCodecCtx->channels * frame->nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
     if(capacity < bufLen){
         data = (uint8_t*)realloc(data, bufLen);
         capacity = bufLen;
     }
 
-   int out_count = (int64_t)(frame->nb_samples) *4* aw->codecCtx->sample_rate / frame->sample_rate + 256;
+   int out_count = (int64_t)(frame->nb_samples) *4* aw->audioCodecCtx->sample_rate / frame->sample_rate + 256;
    /*
    int out_size  = av_samples_get_buffer_size(NULL, frame->channels, out_count, AV_SAMPLE_FMT_S16, 0);
     int len2;
@@ -218,7 +218,7 @@ void AudioOutput::readAVFrame(AVFrame* frame)
         return;
     }
     index = 0;
-    size = aw->codecCtx->channels * len2 * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
+    size = aw->audioCodecCtx->channels * len2 * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
 
     /* if a frame has been decoded, output it */
 /*

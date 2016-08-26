@@ -24,7 +24,9 @@ public:
         PlayingState,
         PauseingState
     };
-
+    enum {
+        MaxVolume = 100
+    };
     AudioPlayer(QWidget* parent = 0);
     ~AudioPlayer();   
     void stop();
@@ -41,7 +43,7 @@ public slots:
     void closeAudioFile();
 
  //   void seek();
-    void setVolum(int volum);
+    void setVolume(int volume);
 //    void suspend();
  //   void resume();
 
