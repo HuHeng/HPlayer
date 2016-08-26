@@ -9,6 +9,8 @@ extern "C"{
 }
 #include "safequeue.h"
 #include <memory>
+#include <QAudioOutput>
+#include <QAudioFormat>
 
 class QIODevice;
 
@@ -102,34 +104,27 @@ private:
     std::shared_ptr<AudioWorks> aw;
 };
 
-class AudioBuffer{
-public:
-    AudioBuffer(std::shared_ptr<AudioWorks> AudioWorks);
-    ~AudioBuffer();
-	void readAVFrame(AVFrame* frame);
-    void writeData(QIODevice* audioDevice, int len);
-    int getSize();
-    uint8_t* data;
-private:
-  //  QIODevice* audioOutput;
-    std::shared_ptr<AudioWorks> aw;
-	SwrContext* swrCtx;
-
-	int capacity;
-	int size;
-	int index;
-};
-/*
-class AudioOutput
+class AudioOutput : public QAudioOutput
 {
 public:
-    //write audio data to audio device
-    writeAudioData(std::shared_ptr<AudioWorks> aw);
+    AudioOutput(QAudioFormat audioFormat, std::shared_ptr<AudioWorks> audioWorks);
+    virtual ~AudioOutput();
+    void init();
+    //read a avframe to data buffer
+    void readAVFrame(AVFrame* frame);
+    //write len of audio data to audio device
+    void write();
+    void writeData(int len);
 private:
-    QIODevice audioDevice;
-    QAudioOutput audioOutput;
-};
-*/
+    QIODevice* audioDevice;
+    std::shared_ptr<AudioWorks> aw;
+    SwrContext* swrCtx;
 
+    //data buffer
+    uint8_t* data;
+    int capacity;
+    int size;
+    int index;
+};
 
 #endif

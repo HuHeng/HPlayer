@@ -160,20 +160,31 @@ void AudioDecoder::run()
 }
 
 
-AudioBuffer::AudioBuffer(std::shared_ptr<AudioWorks> audioWorks):data(NULL),capacity(0),size(0),index(0),aw(audioWorks),swrCtx(NULL)
+AudioOutput::AudioOutput(QAudioFormat audioFormat, std::shared_ptr<AudioWorks> audioWorks) :
+    QAudioOutput(audioFormat),
+    data(NULL),capacity(0),size(0),index(0),
+    aw(audioWorks),
+    swrCtx(NULL),
+    audioDevice(NULL)
 {
 
 }
 
-AudioBuffer::~AudioBuffer(){
+AudioOutput::~AudioOutput(){
     if(swrCtx)
         swr_free(&swrCtx);
     if(data)
         free(data);
 }
 
-//maybe work
-void AudioBuffer::readAVFrame(AVFrame* frame)
+void AudioOutput::init()
+{
+    //qaudiooutput->start
+    audioDevice = start();
+}
+
+
+void AudioOutput::readAVFrame(AVFrame* frame)
 {
     if(!swrCtx){
         swrCtx = swr_alloc_set_opts(NULL,
@@ -220,12 +231,8 @@ void AudioBuffer::readAVFrame(AVFrame* frame)
   //  size = 4*frame->nb_samples;
 
 }
-int AudioBuffer::getSize()
-{
-    return size;
-}
 
-void AudioBuffer::writeData(QIODevice *audioDevice, int len)
+void AudioOutput::writeData(int len)
 {
     if(size < len){
         std::cout<<"no enough size\n";
@@ -236,4 +243,33 @@ void AudioBuffer::writeData(QIODevice *audioDevice, int len)
     index += len;
     if(size == 0)
         index = 0;
+}
+
+void AudioOutput::write()
+{
+    int freeBytes = bytesFree();
+    if(freeBytes <= 0)
+        return;
+    /*first, send the remain data of audio buffer*/
+    int remain = size;
+    //write remain data
+    if(remain < freeBytes && remain > 0){
+        writeData(remain);
+        freeBytes -= remain;
+    }
+    /*second, convert the avframe to the audio buffer and send to the device*/
+    while(freeBytes > 0 && aw->audioFrameQ.size() > 0){
+        //convert AVframe data to audio buffer
+        std::shared_ptr<Frame> sharedFrame;
+        aw->audioFrameQ.pop(sharedFrame);
+        readAVFrame(sharedFrame->frame);
+        if(freeBytes <= size){
+            writeData(freeBytes);
+            freeBytes = 0;
+        } else{
+            int len = size;
+            writeData(len);
+            freeBytes -= len;
+        }
+    }
 }

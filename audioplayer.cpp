@@ -98,7 +98,7 @@ bool AudioPlayer::openAudioFile()
 	//create demuxer and decoder
     demuxer = std::make_shared<Demuxer>(aw);
     audioDecoder = std::make_shared<AudioDecoder>(aw);
-    audioBuffer = std::make_shared<AudioBuffer>(aw);
+
 	//set QAudioFormat
 	openAudioOutput();
 
@@ -139,41 +139,19 @@ void AudioPlayer::openAudioOutput()
     audioFormat.setSampleType(QAudioFormat::SignedInt);
     audioFormat.setSampleSize(16);
 
-    audioOutput = new QAudioOutput(audioFormat, 0);
-    audioDevice = audioOutput->start();
+    audioOutput = new AudioOutput(audioFormat, aw);
+    audioOutput->init();
 
 }
 
-
+/*
+ * eventLoop about 10ms per time
+ * write audio data and display the image with appropriate pts
+*/
 void AudioPlayer::eventLoop()
 {    
-    /*about 10ms per loop*/
-    int freeBytes = audioOutput->bytesFree();
-	if(freeBytes <= 0)
-		return;
-	/*first, send the remain data of audio buffer*/
-    int remain = audioBuffer->getSize();
-    //write remain data
-    if(remain < freeBytes && remain > 0){
-        audioBuffer->writeData(audioDevice, remain);
-        freeBytes -= remain;
-	}
-	/*second, convert the avframe to the audio buffer and send to the device*/
-	while(freeBytes > 0 && aw->audioFrameQ.size() > 0){
-		//convert AVframe data to audio buffer 
-        std::shared_ptr<Frame> sharedFrame;
-        aw->audioFrameQ.pop(sharedFrame);
-        audioBuffer->readAVFrame(sharedFrame->frame);
-        if(freeBytes <= audioBuffer->getSize()){
-            audioBuffer->writeData(audioDevice, freeBytes);
-            freeBytes = 0;
-        } else{
-            int len = audioBuffer->getSize();
-            audioBuffer->writeData(audioDevice, len);
-            freeBytes -= len;
-        }
-    }
-
+    //write may not be blocked
+    audioOutput->write();
 
 }
 

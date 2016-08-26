@@ -50,9 +50,7 @@ private slots:
 
 private:
 	/*audio play device*/
-    QAudioOutput *audioOutput;
-    QIODevice* audioDevice;
-    std::shared_ptr<AudioBuffer> audioBuffer;
+    AudioOutput *audioOutput;
     std::shared_ptr<AudioDecoder> audioDecoder;
     std::shared_ptr<Demuxer> demuxer;
 
