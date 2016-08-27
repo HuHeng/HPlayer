@@ -44,6 +44,9 @@ public slots:
 
  //   void seek();
     void setVolume(int volume);
+    void playPause();
+    void pause();
+    void resume();
 //    void suspend();
  //   void resume();
 
@@ -67,6 +70,7 @@ private:
     ClickedSlider* volumeSlider;
     QPushButton* openButton;
     QPushButton* stopButton;
+    QPushButton* playButton;
     QWidget* videoWidget;
 };
 

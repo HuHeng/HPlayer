@@ -52,6 +52,7 @@ public:
     int volume;
 	double pos;
 	char* filename;
+    bool pause;
 	bool eof; /*end of file*/
 	bool abortRequest;
     SafeQueue<std::shared_ptr<Packet>, 100> audioPacketQ;

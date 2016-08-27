@@ -212,23 +212,13 @@ void AudioOutput::readAVFrame(AVFrame* frame)
     */
 
     int len2 = swr_convert(swrCtx, out, out_count, in, frame->nb_samples);
-    std::cout<<len2<<"\n";
+    //std::cout<<len2<<"\n";
     if (len2 < 0) {
         std::cout<<"swr_convert() failed\n";
         return;
     }
     index = 0;
     size = aw->audioCodecCtx->channels * len2 * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
-
-    /* if a frame has been decoded, output it */
-/*
-    for(int i=0; i < frame->nb_samples; ++i){
-        memcpy(data+i*4, in[0] + i*2, 2);
-        memcpy(data+i*4+2, in[1] + i*2, 2);
-    }
-*/
- //   index = 0;
-  //  size = 4*frame->nb_samples;
 
 }
 

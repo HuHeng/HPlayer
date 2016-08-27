@@ -10,6 +10,7 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QFileDialog>
+#include <QCommonStyle>
 
 #include <iostream>
 #include "audioplayer.h"
@@ -40,8 +41,13 @@ AudioPlayer::AudioPlayer(QWidget* parent)
     //control layout
     openButton = new QPushButton(tr("open..."));
     connect(openButton, SIGNAL(clicked()), this, SLOT(openAudioFile()));
+
     stopButton = new QPushButton(tr("stop"));
     connect(stopButton, SIGNAL(clicked()), this, SLOT(closeAudioFile()));
+
+    playButton = new QPushButton();
+    playButton->setIcon(QCommonStyle().standardIcon(QStyle::SP_MediaPlay));
+    connect(playButton, SIGNAL(clicked()), this, SLOT(playPause()));
 
     volumeSlider = new ClickedSlider;
     volumeSlider->setMinimum(0);
@@ -51,13 +57,18 @@ AudioPlayer::AudioPlayer(QWidget* parent)
     QBoxLayout *controlLayout = new QHBoxLayout;
     controlLayout->setMargin(0);
     controlLayout->addWidget(openButton);
-    controlLayout->addWidget(stopButton);
+    controlLayout->addWidget(stopButton);   
+    controlLayout->addWidget(playButton);
     controlLayout->addWidget(volumeSlider);
-    controlLayout->addStretch(2);
+    controlLayout->addStretch(1);
 
     //set center widget layout
     QBoxLayout *layout = new QVBoxLayout;
     videoWidget = new QWidget;
+    QPalette pal;
+    pal.setColor(QPalette::Background, Qt::black);
+    videoWidget->setAutoFillBackground(true);
+    videoWidget->setPalette(pal);
     layout->addWidget(videoWidget);
     layout->addLayout(progressLayout);
     layout->addLayout(controlLayout);
@@ -158,6 +169,8 @@ void AudioPlayer::openAudioOutput()
 void AudioPlayer::eventLoop()
 {    
     //write may not be blocked
+    if(playerState == PauseingState)
+        return;
     audioOutput->write();
 
 }
@@ -174,6 +187,28 @@ void AudioPlayer::setVolume(int volume)
         return;
     aw->volume = volume;
     audioOutput->setVolume((qreal)volume/MaxVolume);
+}
+
+void AudioPlayer::playPause()
+{
+    if(playerState == PlayingState){
+        pause();
+    } else if(playerState == PauseingState){
+        resume();
+    }
+
+}
+
+void AudioPlayer::pause()
+{
+    playButton->setIcon(QCommonStyle().standardIcon(QStyle::SP_MediaPause));
+    playerState = PauseingState;
+}
+
+void AudioPlayer::resume()
+{
+    playButton->setIcon(QCommonStyle().standardIcon(QStyle::SP_MediaPlay));
+    playerState = PlayingState;
 }
 
 void AudioPlayer::keyPressEvent(QKeyEvent *e)
@@ -200,12 +235,7 @@ void AudioPlayer::keyPressEvent(QKeyEvent *e)
         qDebug()<<"set volume:"<<aw->volume;
         break;
     case Qt::Key_Space:
-        std::cout<<std::this_thread::get_id()<<std::endl;
-        pause = audioOutput->state() == QAudio::SuspendedState ? true : false;
-        if(pause)
-            audioOutput->resume();
-        else
-            audioOutput->suspend();
+        playPause();
         break;
 	case Qt::Key_Q:
 		/*quit*/
