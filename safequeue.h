@@ -15,6 +15,7 @@ public:
 	SafeQueue():abortRequest(0){}
 	void pop(T& data);
 	void push(const T& data);
+    void clear();
 	void abort();
 	unsigned int size();
 private:
@@ -56,6 +57,13 @@ void SafeQueue<T, MAXSIZE>::pop(T& data)
 	data = q.front();
 	q.pop();
 	condNotFull.notify_one();
+}
+
+template<typename T, int MAXSIZE>
+void SafeQueue<T, MAXSIZE>::clear()
+{
+    std::unique_lock<std::mutex> lock(qMutex);
+    q.swap(SafeQueue<T, MAXSIZE>());
 }
 
 template<typename T, int MAXSIZE>

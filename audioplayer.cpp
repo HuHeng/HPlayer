@@ -109,7 +109,7 @@ bool AudioPlayer::openAudioFile()
 	/*open stream and init format Ctx and Codec Ctx*/
     //used shared_ptr
     aw = std::make_shared<AudioWorks>();
-	//test mp3
+
     if(aw->init(fileName.toStdString().c_str()) < 0)
         return false;
     volumeSlider->setValue(aw->volume);
@@ -187,6 +187,7 @@ void AudioPlayer::setVolume(int volume)
         return;
     aw->volume = volume;
     audioOutput->setVolume((qreal)volume/MaxVolume);
+    volumeSlider->setValue(volume);
 }
 
 void AudioPlayer::playPause()
@@ -201,13 +202,13 @@ void AudioPlayer::playPause()
 
 void AudioPlayer::pause()
 {
-    playButton->setIcon(QCommonStyle().standardIcon(QStyle::SP_MediaPause));
+    playButton->setIcon(QCommonStyle().standardIcon(QStyle::SP_MediaPlay));
     playerState = PauseingState;
 }
 
 void AudioPlayer::resume()
 {
-    playButton->setIcon(QCommonStyle().standardIcon(QStyle::SP_MediaPlay));
+    playButton->setIcon(QCommonStyle().standardIcon(QStyle::SP_MediaPause));
     playerState = PlayingState;
 }
 
@@ -217,8 +218,6 @@ void AudioPlayer::keyPressEvent(QKeyEvent *e)
      * audio volume and audio state should be stored in a context
        thus prevented unnecessay getting value;
     */
-    int v;
-    bool pause;
     switch(e->key()){
     case Qt::Key_Down:
         aw->volume -= volumeDelta;

@@ -33,7 +33,10 @@ public:
 
     virtual void keyPressEvent(QKeyEvent* e);
     virtual void closeEvent(QCloseEvent* e);
+
+    //init audioworks
 	void openAudioOutput();
+
 
 public slots:
     //init audioworks, start demuxer and decoder thread
@@ -64,7 +67,7 @@ private:
     std::shared_ptr<AudioWorks> aw;
     State playerState;
 
-    /*ui*/
+    /*ui and control*/
     ClickedSlider* progressSlider;
     QLineEdit* durationEdit;
     ClickedSlider* volumeSlider;

@@ -2,7 +2,6 @@
 #include <thread>
 #include <QIODevice>
 #include "audioworks.h"
-#include <stdio.h>
 #include <string.h>
 
 
@@ -23,6 +22,7 @@ AudioWorks::~AudioWorks()
 {
 	//todo: delete object and free memory
     avcodec_free_context(&audioCodecCtx);
+    avcodec_free_context(&videoCodecCtx);
     avformat_close_input(&formatCtx);
 }
 
@@ -30,6 +30,7 @@ int AudioWorks::init(const char* filename)
 {
 	int ret = 0;
     av_register_all();
+
 	/*open formatctx*/
 	ret = avformat_open_input(&formatCtx, filename, NULL, NULL);
 	if(ret < 0){
@@ -71,8 +72,35 @@ int AudioWorks::init(const char* filename)
         std::cout<<"open audioCodecCtx failed!"<<std::endl;
 		return -1;
 	}
-    /*TODO:init play state*/
 
+    /*find video stream index*/
+    int videoStreamIndex = av_find_best_stream(formatCtx, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
+    if(videoStreamIndex < 0){
+        std::cout<<"can't find video stream"<<std::endl;
+        return videoStreamIndex;
+    }
+    videoIndex = videoStreamIndex;
+    /*alloc audioCodecCtx and open it*/
+    videoCodecCtx = avcodec_alloc_context3(NULL);
+    if(videoCodecCtx == NULL){
+        std::cout<<"alloc AVCodecContext failed!"<<std::endl;
+        return -1;
+    }
+    ret = avcodec_parameters_to_context(videoCodecCtx, formatCtx->streams[videoStreamIndex]->codecpar);
+    /*find the decode type*/
+    AVCodec* vcodec = avcodec_find_decoder(videoCodecCtx->codec_id);
+    if(vcodec == NULL){
+        std::cout<<"find decoder failed!"<<std::endl;
+        return -1;
+    }
+    AVDictionary *vopts = NULL;
+    av_dict_set(&vopts, "refcounted_frames", "1", 0);
+
+    ret = avcodec_open2(videoCodecCtx, vcodec, &vopts);
+    if(ret < 0){
+        std::cout<<"open videoCodecCtx failed!"<<std::endl;
+        return -1;
+    }
     return 0;
 }
 
@@ -101,6 +129,7 @@ void Demuxer::run()
             ppkt->size = 0;
             ppkt->data = NULL;
             aw->audioPacketQ.push(sharedPkt);
+            aw->videoPacketQ.push(sharedPkt);
 			aw->eof = true;
 			//FIXME: maybe stop
 			break;
@@ -108,6 +137,8 @@ void Demuxer::run()
 		/*push the audio packet*/
         if(ppkt->stream_index == aw->audioIndex){
             aw->audioPacketQ.push(sharedPkt);
+        } else if(ppkt->stream_index == aw->videoIndex){
+            aw->videoPacketQ.push(sharedPkt);
         }
 	}
 }
@@ -123,7 +154,6 @@ AudioDecoder::~AudioDecoder()
 
 void AudioDecoder::run()
 {
-
 	//get a pkt and decode it
     //AVFrame* frame = av_frame_alloc();
     auto sharedFrame = std::make_shared<Frame>();
@@ -144,7 +174,7 @@ void AudioDecoder::run()
 		do{
             int ret = avcodec_decode_audio4(aw->audioCodecCtx, frame, &gotFrame, ppkt);
 			if(ret < 0){
-				std::cout<<"decode audio error!"<<std::endl;	
+                std::cout<<"decode audio error!"<<std::endl;
 				break;
 			}
 			if(gotFrame){
@@ -157,6 +187,51 @@ void AudioDecoder::run()
             ppkt->size -= ret;
         } while((ppkt->size > 0 || (gotFrame && flush)) && aw->abortRequest != 1);
 	}
+}
+
+VideoDecoder::VideoDecoder(std::shared_ptr<AudioWorks> audioWorks):aw(audioWorks)
+{
+
+}
+VideoDecoder::~VideoDecoder()
+{
+
+}
+
+void VideoDecoder::run()
+{
+    auto sharedFrame = std::make_shared<Frame>();
+    for(;;){
+        if(aw->abortRequest == 1)
+            break;
+        std::shared_ptr<Packet> sharedPacket;
+        aw->videoPacketQ.pop(sharedPacket);
+        AVPacket* ppkt = &sharedPacket->pkt;
+        int flush = 0;
+        //flush the left frame
+        if(ppkt->size == 0 && ppkt->data == NULL)
+            flush = 1;
+
+        //get a frame and push
+        int gotFrame = 1;
+        AVFrame* frame = sharedFrame->frame;
+        do{
+            int ret = avcodec_decode_video2(aw->audioCodecCtx, frame, &gotFrame, ppkt);
+            if(ret < 0){
+                std::cout<<"decode video error!"<<std::endl;
+                break;
+            }
+            if(gotFrame){
+                //AVFrame* qFrame = av_frame_alloc();
+                auto qFrame = std::make_shared<Frame>();
+                av_frame_move_ref(qFrame->frame, frame);
+                aw->videoFrameQ.push(qFrame);
+            }
+            ppkt->data += ret;
+            ppkt->size -= ret;
+        } while((ppkt->size > 0 || (gotFrame && flush)) && aw->abortRequest != 1);
+    }
+
 }
 
 

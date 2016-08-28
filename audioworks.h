@@ -56,12 +56,16 @@ public:
 	bool eof; /*end of file*/
 	bool abortRequest;
     SafeQueue<std::shared_ptr<Packet>, 100> audioPacketQ;
-    SafeQueue<std::shared_ptr<Frame>, 100> audioFrameQ;
+    SafeQueue<std::shared_ptr<Frame>, 30> audioFrameQ;
+    SafeQueue<std::shared_ptr<Packet>, 30> videoPacketQ;
+    SafeQueue<std::shared_ptr<Frame>, 10> videoFrameQ;
 	/* ffmpeg struct */
 	AVFormatContext* formatCtx;
     AVCodecContext* audioCodecCtx;
+    AVCodecContext* videoCodecCtx;
 
 	int audioIndex;
+    int videoIndex;
 };
 
 
@@ -100,6 +104,16 @@ public:
     AudioDecoder(std::shared_ptr<AudioWorks> audioWorks);
 	~AudioDecoder();
 	virtual void run();
+private:
+    std::shared_ptr<AudioWorks> aw;
+};
+
+class VideoDecoder: public ThreadObj
+{
+public:
+    VideoDecoder(std::shared_ptr<AudioWorks> audioWorks);
+    ~VideoDecoder();
+    virtual void run();
 private:
     std::shared_ptr<AudioWorks> aw;
 };
