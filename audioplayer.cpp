@@ -3,6 +3,7 @@
 #include <QDebug>
 
 #include <QTimer>
+#include <QTime>
 #include <QMouseEvent>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -32,7 +33,7 @@ AudioPlayer::AudioPlayer(QWidget* parent)
     progressSlider = new ClickedSlider;
     durationEdit = new QLineEdit;
     durationEdit->setReadOnly(true);
-
+    connect(progressSlider, SIGNAL(valueChanged(int)), this, SLOT(seek(int)));
     progressLayout->addWidget(progressSlider,0,0);
     progressLayout->addWidget(durationEdit,0,1);
     progressLayout->setColumnStretch(0,4);
@@ -76,7 +77,7 @@ AudioPlayer::AudioPlayer(QWidget* parent)
     QWidget* centerW = new QWidget;
     centerW->setLayout(layout);
     this->setCentralWidget(centerW);
-    this->resize(320,240);
+    this->resize(640,480);
 }
 
 AudioPlayer::~AudioPlayer()
@@ -113,6 +114,14 @@ bool AudioPlayer::openAudioFile()
     if(aw->init(fileName.toStdString().c_str()) < 0)
         return false;
     volumeSlider->setValue(aw->volume);
+    progressSlider->setMinimum(0);
+    progressSlider->setMaximum(aw->formatCtx->duration/AV_TIME_BASE);
+    qDebug()<<"duration: "<<aw->formatCtx->duration/AV_TIME_BASE;
+    QTime duration(0,0);
+    duration = duration.addSecs(aw->formatCtx->duration/AV_TIME_BASE);
+    progressSlider->setValue(0);
+    durationEdit->setText(QTime(0,0).toString() + "/" + duration.toString());
+    qDebug()<<duration;
 	//create demuxer and decoder
     demuxer = std::make_shared<Demuxer>(aw);
     audioDecoder = std::make_shared<AudioDecoder>(aw);
@@ -168,6 +177,14 @@ void AudioPlayer::openAudioOutput()
 */
 void AudioPlayer::eventLoop()
 {    
+    /*set progress value*/
+    qint64 t = audioOutput->processedUSecs();
+    //qDebug()<<"t: "<<t;
+    t -= aw->bypastSerialsProcessUsec;
+    //qDebug()<<"t: "<<t;
+    aw->pos = aw->lastPos + t;
+    progressSlider->setValue(aw->pos/1000000);
+
     //write may not be blocked
     if(playerState == PauseingState)
         return;
@@ -179,6 +196,14 @@ void AudioPlayer::closeEvent(QCloseEvent* event)
 {
     closeAudioFile();
     event->accept();
+}
+
+void AudioPlayer::seek(int pos)
+{
+    QTime t(0,0);
+    QTime tNow = t.addSecs(pos);
+    QTime tDuration = t.addSecs(progressSlider->maximum());
+    durationEdit->setText(tNow.toString() + "/" + tDuration.toString());
 }
 
 void AudioPlayer::setVolume(int volume)

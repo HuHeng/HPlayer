@@ -40,6 +40,7 @@ struct Frame
 };
 
 
+
 class AudioWorks
 {
 public:
@@ -50,11 +51,15 @@ public:
 	/* this class may store status */
     /* range: 0-100 corresponding to the volumeSlider value*/
     int volume;
-	double pos;
 	char* filename;
     bool pause;
 	bool eof; /*end of file*/
 	bool abortRequest;
+    /*clock and pos issue*/
+    qint64 pos;
+    qint64 lastPos;
+    qint64 bypastSerialsProcessUsec;
+
     SafeQueue<std::shared_ptr<Packet>, 100> audioPacketQ;
     SafeQueue<std::shared_ptr<Frame>, 30> audioFrameQ;
     SafeQueue<std::shared_ptr<Packet>, 30> videoPacketQ;

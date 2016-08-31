@@ -45,7 +45,7 @@ public slots:
     //stop demux and decode threads, destroy audioworks
     void closeAudioFile();
 
- //   void seek();
+    void seek(int);
     void setVolume(int volume);
     void playPause();
     void pause();

@@ -9,6 +9,8 @@
 AudioWorks::AudioWorks():
     volume(80),
 	pos(0),
+    lastPos(0),
+    bypastSerialsProcessUsec(0),
 	filename(NULL),
 	eof(false),
 	abortRequest(false),
