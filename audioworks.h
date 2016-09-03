@@ -18,7 +18,8 @@ class QIODevice;
 struct Packet
 {
     AVPacket pkt;
-    Packet(){
+    int serial;
+    Packet():serial(0){
         av_init_packet(&pkt);
     }
     ~Packet(){
@@ -30,7 +31,8 @@ struct Packet
 struct Frame
 {
     AVFrame* frame;
-    Frame(){
+    int serial;
+    Frame():serial(0){
         frame = av_frame_alloc();
     }
     ~Frame(){
@@ -52,19 +54,24 @@ public:
     /* range: 0-100 corresponding to the volumeSlider value*/
     int volume;
 	char* filename;
+
+    int serial;/*serial plus 1 after stream seek*/
     bool pause;
 	bool eof; /*end of file*/
 	bool abortRequest;
+
     /*clock and pos issue*/
     qint64 pos;
-    qint64 lastPos;
+    qint64 basePos;/*base pos of the current serial*/
+    qint64 seekPos;
     qint64 bypastSerialsProcessUsec;
 
     SafeQueue<std::shared_ptr<Packet>, 100> audioPacketQ;
     SafeQueue<std::shared_ptr<Frame>, 30> audioFrameQ;
     SafeQueue<std::shared_ptr<Packet>, 30> videoPacketQ;
     SafeQueue<std::shared_ptr<Frame>, 10> videoFrameQ;
-	/* ffmpeg struct */
+
+    /* ffmpeg struct */
 	AVFormatContext* formatCtx;
     AVCodecContext* audioCodecCtx;
     AVCodecContext* videoCodecCtx;
@@ -134,10 +141,14 @@ public:
     //write len of audio data to audio device
     void write();
     void writeData(int len);
+    qint64 currentSerialPlayedUsec();
 private:
     QIODevice* audioDevice;
     std::shared_ptr<AudioWorks> aw;
     SwrContext* swrCtx;
+
+    int serial;
+    qint64 bypastSerialsProcessedUsec;
 
     //data buffer
     uint8_t* data;

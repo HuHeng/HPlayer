@@ -24,7 +24,8 @@ AudioPlayer::AudioPlayer(QWidget* parent)
     : QMainWindow(parent),
     audioOutput(NULL),
     sendTimer(NULL),
-    playerState(StopedState)
+    playerState(StopedState),
+    serial(0)
 {
     /*creat controls and setup ui*/
 
@@ -33,7 +34,7 @@ AudioPlayer::AudioPlayer(QWidget* parent)
     progressSlider = new ClickedSlider;
     durationEdit = new QLineEdit;
     durationEdit->setReadOnly(true);
-    connect(progressSlider, SIGNAL(valueChanged(int)), this, SLOT(seek(int)));
+    connect(progressSlider, SIGNAL(valueChanged(int)), this, SLOT(setPosEdit(int)));
     progressLayout->addWidget(progressSlider,0,0);
     progressLayout->addWidget(durationEdit,0,1);
     progressLayout->setColumnStretch(0,4);
@@ -178,11 +179,9 @@ void AudioPlayer::openAudioOutput()
 void AudioPlayer::eventLoop()
 {    
     /*set progress value*/
-    qint64 t = audioOutput->processedUSecs();
+    qint64 t = audioOutput->currentSerialPlayedUsec();
     //qDebug()<<"t: "<<t;
-    t -= aw->bypastSerialsProcessUsec;
-    //qDebug()<<"t: "<<t;
-    aw->pos = aw->lastPos + t;
+    aw->pos = aw->basePos + t;
     progressSlider->setValue(aw->pos/1000000);
 
     //write may not be blocked
@@ -198,12 +197,16 @@ void AudioPlayer::closeEvent(QCloseEvent* event)
     event->accept();
 }
 
-void AudioPlayer::seek(int pos)
+void AudioPlayer::setPosEdit(int pos)
 {
     QTime t(0,0);
     QTime tNow = t.addSecs(pos);
     QTime tDuration = t.addSecs(progressSlider->maximum());
     durationEdit->setText(tNow.toString() + "/" + tDuration.toString());
+    //compare pos and aw->pos, decide seek or not
+    int delta = pos - aw->pos/1000000;
+    if(delta <= -2 || delta >= 2)
+        seek(pos);
 }
 
 void AudioPlayer::setVolume(int volume)
@@ -235,6 +238,17 @@ void AudioPlayer::resume()
 {
     playButton->setIcon(QCommonStyle().standardIcon(QStyle::SP_MediaPause));
     playerState = PlayingState;
+}
+
+/*
+ * stream seek in two cases
+ * 1 click the progress slider, valuechange signal will emit
+ * 2 press left or right key
+*/
+void AudioPlayer::seek(int pos)
+{
+    //aw->basePos = pos;
+    aw->seekPos = pos * AV_TIME_BASE;
 }
 
 void AudioPlayer::keyPressEvent(QKeyEvent *e)

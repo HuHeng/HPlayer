@@ -45,13 +45,13 @@ public slots:
     //stop demux and decode threads, destroy audioworks
     void closeAudioFile();
 
-    void seek(int);
+    void setPosEdit(int);
+
     void setVolume(int volume);
     void playPause();
     void pause();
     void resume();
-//    void suspend();
- //   void resume();
+    void seek(int pos);
 
 private slots:
 	void eventLoop();
@@ -66,7 +66,7 @@ private:
 	
     std::shared_ptr<AudioWorks> aw;
     State playerState;
-
+    int serial;
     /*ui and control*/
     ClickedSlider* progressSlider;
     QLineEdit* durationEdit;

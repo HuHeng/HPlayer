@@ -9,13 +9,17 @@
 AudioWorks::AudioWorks():
     volume(80),
 	pos(0),
-    lastPos(0),
+    basePos(0),
+    seekPos(0),
+    serial(0),
     bypastSerialsProcessUsec(0),
 	filename(NULL),
 	eof(false),
 	abortRequest(false),
 	formatCtx(NULL),
-    audioCodecCtx(NULL)
+    audioCodecCtx(NULL),
+    audioIndex(-1),
+    videoIndex(-1)
 {
 
 }
@@ -120,8 +124,25 @@ void Demuxer::run()
 	{
         if(aw->abortRequest == 1)
             break;
+
+        if(aw->seekPos != 0){
+            qint64 seek_target = aw->seekPos;
+            qint64 seek_min    = aw->seekPos > aw->pos ? aw->pos + 2: INT64_MIN;
+            qint64 seek_max    = aw->seekPos < aw->pos ? aw->pos - 2: INT64_MAX;
+            int ret = avformat_seek_file(aw->formatCtx, -1, seek_min, seek_target, seek_max, 0);
+            if(ret < 0){
+                std::cout<<"seek failed!"<<"\n";
+            } else {
+                /*seek success*/
+                aw->serial++;
+                aw->basePos = seek_target;
+            }
+            aw->seekPos = 0;
+        }
+
         auto sharedPkt = std::make_shared<Packet>();
         //av_init_packet(&pkt);
+        sharedPkt->serial = aw->serial;
         AVPacket* ppkt = &sharedPkt->pkt;
         ppkt->size = 0;
         ppkt->data = NULL;
@@ -137,7 +158,7 @@ void Demuxer::run()
 			break;
 		}
 		/*push the audio packet*/
-        if(ppkt->stream_index == aw->audioIndex){
+        if(ppkt->stream_index == aw->audioIndex){            
             aw->audioPacketQ.push(sharedPkt);
         } else if(ppkt->stream_index == aw->videoIndex){
             aw->videoPacketQ.push(sharedPkt);
@@ -165,6 +186,7 @@ void AudioDecoder::run()
         std::shared_ptr<Packet> sharedPacket;
         aw->audioPacketQ.pop(sharedPacket);
         AVPacket* ppkt = &sharedPacket->pkt;
+        int serial = sharedPacket->serial;
 		int flush = 0;
 		//flush the left frame
         if(ppkt->size == 0 && ppkt->data == NULL)
@@ -182,6 +204,7 @@ void AudioDecoder::run()
 			if(gotFrame){
                 //AVFrame* qFrame = av_frame_alloc();
                 auto qFrame = std::make_shared<Frame>();
+                qFrame->serial = serial;
                 av_frame_move_ref(qFrame->frame, frame);
                 aw->audioFrameQ.push(qFrame);
 			}
@@ -208,6 +231,7 @@ void VideoDecoder::run()
             break;
         std::shared_ptr<Packet> sharedPacket;
         aw->videoPacketQ.pop(sharedPacket);
+        int serial = sharedPacket->serial;
         AVPacket* ppkt = &sharedPacket->pkt;
         int flush = 0;
         //flush the left frame
@@ -226,6 +250,7 @@ void VideoDecoder::run()
             if(gotFrame){
                 //AVFrame* qFrame = av_frame_alloc();
                 auto qFrame = std::make_shared<Frame>();
+                qFrame->serial = serial;
                 av_frame_move_ref(qFrame->frame, frame);
                 aw->videoFrameQ.push(qFrame);
             }
@@ -242,7 +267,9 @@ AudioOutput::AudioOutput(QAudioFormat audioFormat, std::shared_ptr<AudioWorks> a
     data(NULL),capacity(0),size(0),index(0),
     aw(audioWorks),
     swrCtx(NULL),
-    audioDevice(NULL)
+    audioDevice(NULL),
+    serial(0),
+    bypastSerialsProcessedUsec(0)
 {
 
 }
@@ -329,6 +356,8 @@ void AudioOutput::write()
         //convert AVframe data to audio buffer
         std::shared_ptr<Frame> sharedFrame;
         aw->audioFrameQ.pop(sharedFrame);
+        if(sharedFrame->serial != aw->serial)
+            continue;
         readAVFrame(sharedFrame->frame);
         if(freeBytes <= size){
             writeData(freeBytes);
@@ -339,4 +368,23 @@ void AudioOutput::write()
             freeBytes -= len;
         }
     }
+}
+
+qint64 AudioOutput::currentSerialPlayedUsec()
+{
+    if(serial != aw->serial){
+        this->reset();
+        //debug
+        audioDevice = this->start();
+        serial = aw->serial;
+        return 0;
+    }
+    qint64 currentSerialProcessedUsec = this->processedUSecs();
+    int bytesInBuffer = this->bufferSize() - this->bytesFree();
+    QAudioFormat format = this->format();
+    int sampleSizes = format.sampleSize();
+    int channels = format.channelCount();
+    int sampleRates = format.sampleRate();
+    qint64 playedUsec = currentSerialProcessedUsec - (qint64)(1000000) * 8 * bytesInBuffer/sampleSizes/channels/sampleRates;
+    return playedUsec;
 }

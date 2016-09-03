@@ -7,6 +7,7 @@ class ClickedSlider : public QSlider
 public:
     ClickedSlider(QWidget* parent = 0);
     ~ClickedSlider(){}
+
 protected:
     virtual void mousePressEvent(QMouseEvent* e);
 
