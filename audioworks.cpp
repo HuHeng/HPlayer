@@ -184,7 +184,8 @@ void AudioDecoder::run()
         if(aw->abortRequest == 1)
             break;
         std::shared_ptr<Packet> sharedPacket;
-        aw->audioPacketQ.pop(sharedPacket);
+        if(!aw->audioPacketQ.pop(sharedPacket))
+            continue;
         AVPacket* ppkt = &sharedPacket->pkt;
         int serial = sharedPacket->serial;
 		int flush = 0;
@@ -197,7 +198,7 @@ void AudioDecoder::run()
         AVFrame* frame = sharedFrame->frame;
 		do{
             int ret = avcodec_decode_audio4(aw->audioCodecCtx, frame, &gotFrame, ppkt);
-			if(ret < 0){
+            if(ret < 0){
                 std::cout<<"decode audio error!"<<std::endl;
 				break;
 			}
@@ -230,7 +231,8 @@ void VideoDecoder::run()
         if(aw->abortRequest == 1)
             break;
         std::shared_ptr<Packet> sharedPacket;
-        aw->videoPacketQ.pop(sharedPacket);
+        if(!aw->videoPacketQ.pop(sharedPacket))
+            continue;
         int serial = sharedPacket->serial;
         AVPacket* ppkt = &sharedPacket->pkt;
         int flush = 0;
@@ -355,7 +357,8 @@ void AudioOutput::write()
     while(freeBytes > 0 && aw->audioFrameQ.size() > 0){
         //convert AVframe data to audio buffer
         std::shared_ptr<Frame> sharedFrame;
-        aw->audioFrameQ.pop(sharedFrame);
+        if(!aw->audioFrameQ.pop(sharedFrame))
+            return;
         if(sharedFrame->serial != aw->serial)
             continue;
         readAVFrame(sharedFrame->frame);

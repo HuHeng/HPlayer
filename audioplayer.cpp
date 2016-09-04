@@ -178,6 +178,10 @@ void AudioPlayer::openAudioOutput()
 */
 void AudioPlayer::eventLoop()
 {    
+    /*finished*/
+    if(aw->eof && aw->audioFrameQ.size() == 0){
+        closeAudioFile();
+    }
     /*set progress value*/
     qint64 t = audioOutput->currentSerialPlayedUsec();
     //qDebug()<<"t: "<<t;
