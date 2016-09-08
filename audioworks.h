@@ -6,6 +6,7 @@ extern "C"{
 #include "libavcodec/avcodec.h"
 #include "libavutil/avutil.h"
 #include "libswresample/swresample.h"
+#include "libswscale/swscale.h"
 }
 #include "safequeue.h"
 #include <memory>

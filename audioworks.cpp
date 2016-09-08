@@ -244,7 +244,7 @@ void VideoDecoder::run()
         int gotFrame = 1;
         AVFrame* frame = sharedFrame->frame;
         do{
-            int ret = avcodec_decode_video2(aw->audioCodecCtx, frame, &gotFrame, ppkt);
+            int ret = avcodec_decode_video2(aw->videoCodecCtx, frame, &gotFrame, ppkt);
             if(ret < 0){
                 std::cout<<"decode video error!"<<std::endl;
                 break;

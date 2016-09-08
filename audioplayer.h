@@ -13,6 +13,7 @@ class ClickedSlider;
 class QLineEdit;
 class QWidget;
 class QPushButton;
+class VideoWidget;
 
 class AudioPlayer : public QMainWindow
 {
@@ -36,7 +37,7 @@ public:
 
     //init audioworks
 	void openAudioOutput();
-
+    void refreshVideo(qint64 pos);
 
 public slots:
     //init audioworks, start demuxer and decoder thread
@@ -60,6 +61,7 @@ private:
 	/*audio play device*/
     AudioOutput *audioOutput;
     std::shared_ptr<AudioDecoder> audioDecoder;
+    std::shared_ptr<VideoDecoder> videoDecoder;
     std::shared_ptr<Demuxer> demuxer;
 
     QTimer* sendTimer;
@@ -74,7 +76,7 @@ private:
     QPushButton* openButton;
     QPushButton* stopButton;
     QPushButton* playButton;
-    QWidget* videoWidget;
+    VideoWidget* videoWidget;
 };
 
 #endif // AUDIOPLAYER_H

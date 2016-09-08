@@ -66,11 +66,11 @@ AudioPlayer::AudioPlayer(QWidget* parent)
 
     //set center widget layout
     QBoxLayout *layout = new QVBoxLayout;
-    videoWidget = new QWidget;
-    QPalette pal;
-    pal.setColor(QPalette::Background, Qt::black);
-    videoWidget->setAutoFillBackground(true);
-    videoWidget->setPalette(pal);
+    videoWidget = new VideoWidget();
+   // QPalette pal;
+    //pal.setColor(QPalette::Background, Qt::black);
+    //videoWidget->setAutoFillBackground(true);
+    //videoWidget->setPalette(pal);
     layout->addWidget(videoWidget);
     layout->addLayout(progressLayout);
     layout->addLayout(controlLayout);
@@ -126,13 +126,13 @@ bool AudioPlayer::openAudioFile()
 	//create demuxer and decoder
     demuxer = std::make_shared<Demuxer>(aw);
     audioDecoder = std::make_shared<AudioDecoder>(aw);
-
+    videoDecoder = std::make_shared<VideoDecoder>(aw);
 	//set QAudioFormat
 	openAudioOutput();
 
     demuxer->start();
     audioDecoder->start();
-
+    videoDecoder->start();
 	//start event loop
 	sendTimer = new QTimer();
     connect(sendTimer, SIGNAL(timeout()), this, SLOT(eventLoop()));
@@ -148,10 +148,15 @@ void AudioPlayer::closeAudioFile()
     aw->abortRequest = 1;
     aw->audioFrameQ.abort();
     aw->audioPacketQ.abort();
+    aw->videoFrameQ.abort();
+    aw->videoPacketQ.abort();
+
     demuxer->join();
     audioDecoder->join();
+    videoDecoder->join();
     if(sendTimer)
         sendTimer->stop();
+    progressSlider->setValue(0);
 }
 
 void AudioPlayer::openAudioOutput()
@@ -181,17 +186,60 @@ void AudioPlayer::eventLoop()
     /*finished*/
     if(aw->eof && aw->audioFrameQ.size() == 0){
         closeAudioFile();
+        return;
     }
+    //write may not be blocked
+    if(playerState == PauseingState)
+        return;
     /*set progress value*/
     qint64 t = audioOutput->currentSerialPlayedUsec();
     //qDebug()<<"t: "<<t;
     aw->pos = aw->basePos + t;
     progressSlider->setValue(aw->pos/1000000);
-
-    //write may not be blocked
-    if(playerState == PauseingState)
-        return;
     audioOutput->write();
+    /*refresh video*/
+    refreshVideo(aw->pos);
+
+}
+
+void AudioPlayer::refreshVideo(qint64 pos)
+{
+    for(;;){
+        if(aw->videoFrameQ.size() == 0)
+            return;
+        std::shared_ptr<Frame> sharedFrame = aw->videoFrameQ.front();
+        /*test the frame in pos*/
+        qint64 startPos = sharedFrame->frame->pkt_pts - aw->formatCtx->streams[aw->videoIndex]->start_time;
+        AVRational  timeBase = aw->formatCtx->streams[aw->videoIndex]->time_base;
+        double spos = (double)(timeBase.num) * startPos / timeBase.den;
+        double duration = (double)(timeBase.num) * sharedFrame->frame->pkt_duration / timeBase.den;
+        double cpos = double(pos)/AV_TIME_BASE;
+        if(spos <= cpos && cpos < spos + duration){
+
+            aw->videoFrameQ.pop(sharedFrame);
+            AVFrame* fr = sharedFrame->frame;
+            SwsContext *convertCtx = sws_getContext(aw->videoCodecCtx->width,aw->videoCodecCtx->height
+                                                                    ,aw->videoCodecCtx->pix_fmt,aw->videoCodecCtx->width,aw->videoCodecCtx->height
+                                                                    ,AV_PIX_FMT_RGB32,SWS_BICUBIC,NULL,NULL,NULL);
+            std::shared_ptr<Frame> frameRGB = std::make_shared<Frame>();
+            AVFrame* pFrameRGB = frameRGB->frame;
+            uint8_t *out_buffer;
+            //分配AVFrame所需内存
+            out_buffer = new uint8_t[avpicture_get_size(AV_PIX_FMT_RGB32, aw->videoCodecCtx->width, aw->videoCodecCtx->height)];
+            avpicture_fill((AVPicture *)pFrameRGB, out_buffer, AV_PIX_FMT_RGB32, aw->videoCodecCtx->width, aw->videoCodecCtx->height);
+            sws_scale(convertCtx,(const uint8_t*  const*)fr->data,fr->linesize,0
+                      ,aw->videoCodecCtx->height,pFrameRGB->data,pFrameRGB->linesize);
+            QImage img((uchar *)pFrameRGB->data[0],aw->videoCodecCtx->width,aw->videoCodecCtx->height,QImage::Format_RGB32);
+
+            videoWidget->display(QPixmap::fromImage(img));
+            sws_freeContext(convertCtx);
+            delete[] out_buffer;
+        } else if(cpos < spos){
+            return;
+        } else if(cpos >= spos){
+            aw->videoFrameQ.pop(sharedFrame);
+        }
+    }
 
 }
 

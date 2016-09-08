@@ -18,6 +18,7 @@ public:
     void clear();
 	void abort();
 	unsigned int size();
+    T& front();
 private:
 	std::mutex qMutex;
 	std::queue<T> q;
@@ -85,6 +86,12 @@ unsigned int SafeQueue<T, MAXSIZE>::size()
 {
 	std::unique_lock<std::mutex> lock(qMutex);
 	return q.size();
+}
+
+template<typename T, int MAXSIZE>
+T& SafeQueue<T, MAXSIZE>::front()
+{
+    return q.front();
 }
 
 #endif
